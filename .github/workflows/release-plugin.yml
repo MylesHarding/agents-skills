@@ -1,0 +1,130 @@
+name: Release plugin
+
+# Packages the canonical .claude skills/agents/commands into the Claude plugin under
+# plugins/agents-skills, then tags and publishes a GitHub Release.
+#
+# Versions are CalVer with a patch counter — YYYY.M.D.N — so multiple releases in one
+# day never collide (`.0` is the first of the day). Tags are `v<version>`.
+#
+# The push trigger is scoped to the canonical sources. The release commit this workflow
+# makes touches only plugins/** and .claude-plugin/**, so it cannot re-trigger itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and show the diff without committing or releasing
+        type: boolean
+        default: false
+      force:
+        description: Release even when the plugin payload is unchanged (use for the first release, or to re-cut one)
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - ".claude/skills/**"
+      - ".claude/agents/**"
+      - ".claude/commands/**"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-plugin
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Verify the tool mirrors are in sync
+        run: make check
+
+      - name: Build the plugin payload from the canonical .claude sources
+        run: python3 scripts/build-plugin.py
+
+      - name: Detect changes
+        id: diff
+        run: |
+          git add -A plugins .claude-plugin
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Plugin payload unchanged; nothing to release."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --cached --stat
+          fi
+
+      - name: Show full diff (dry run)
+        if: steps.diff.outputs.changed == 'true' && inputs.dry_run
+        run: git diff --cached
+
+      # The payload is committed in sync, so a routine dispatch sees no diff. `force`
+      # is how the first release (and any re-cut) gets made.
+      - name: Decide whether to release
+        id: gate
+        env:
+          CHANGED: ${{ steps.diff.outputs.changed }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "$CHANGED" = "true" ] || [ "$FORCE" = "true" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to release (payload unchanged, force not set)."
+          fi
+
+      - name: Compute version (CalVer YYYY.M.D.N)
+        id: version
+        if: steps.gate.outputs.release == 'true' && !inputs.dry_run
+        run: |
+          base="$(date -u +%Y.%-m.%-d)"
+          n=0
+          version="$base.$n"
+          while git rev-parse -q --verify "refs/tags/v$version" >/dev/null; do
+            n=$((n + 1))
+            version="$base.$n"
+          done
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$version"
+
+      - name: Stamp version, commit, tag, push
+        if: steps.gate.outputs.release == 'true' && !inputs.dry_run
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 scripts/set-version.py "$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: plugin v$VERSION"
+          git tag "v$VERSION"
+          git push origin HEAD --tags
+
+      - name: Build release assets
+        if: steps.gate.outputs.release == 'true' && !inputs.dry_run
+        run: |
+          shopt -s nullglob
+          mkdir -p dist/skills
+          (cd plugins && zip -qr "$GITHUB_WORKSPACE/dist/agents-skills-plugin.zip" agents-skills)
+          cd plugins/agents-skills/skills
+          for d in */; do
+            d="${d%/}"
+            zip -qr "$GITHUB_WORKSPACE/dist/skills/$d.zip" "$d"
+          done
+
+      - name: Create GitHub release
+        if: steps.gate.outputs.release == 'true' && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 scripts/release-notes.py "$VERSION" > dist/notes.md
+          gh release create "v$VERSION" \
+            --title "agents-skills v$VERSION" \
+            --notes-file dist/notes.md \
+            dist/agents-skills-plugin.zip dist/skills/*.zip

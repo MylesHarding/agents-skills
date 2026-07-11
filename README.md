@@ -13,6 +13,19 @@ The whole set is built to get an accurate result for as few tokens as possible: 
 
 Do the Quickstart for your tool. The full list is under [What's included](#whats-included).
 
+## Install as a Claude Code plugin
+
+The fastest path on Claude Code — this repo is its own plugin marketplace, so you get every skill, agent, and command in two lines, with no files to copy:
+
+```
+/plugin marketplace add skyfox675/agents-skills
+/plugin install agents-skills@agents-skills
+```
+
+Each [release](https://github.com/skyfox675/agents-skills/releases) also attaches `agents-skills-plugin.zip` (the whole plugin) and one zip per skill — the per-skill zips are for Claude Desktop (Settings → Capabilities → Skills → upload). Releases are versioned `YYYY.M.D.N` and tagged `v<version>`.
+
+For the other tools, or to copy the raw files into your own project, use the Quickstart below.
+
 ## Quickstart
 
 1. **Get the files.** Clone this repo and open the folder in your tool. Skills, commands, and agents are already set up inside `.claude/` (and mirrored to `.cursor/` and `.github/`). To use them in your own project instead, copy your tool's folders (named below) into your project root.

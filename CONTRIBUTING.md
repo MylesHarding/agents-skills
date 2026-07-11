@@ -30,6 +30,8 @@ Skills are read directly from `.claude/skills/` by Claude Code, Cursor, and Copi
 
 Git hook templates live under `hooks/` (plain POSIX `sh` + CI workflow templates). They are shareable, not wired to this repo, and have no mirror — keep them dependency-free and generic, with every external tool optional (skip-if-absent). See [`hooks/README.md`](hooks/README.md).
 
+`plugins/agents-skills/` is the **published Claude plugin payload — generated, never hand-edited.** `make build-plugin` rebuilds it from `.claude/{skills,agents,commands}` (real copies, not symlinks: Claude Code installs the plugin directory on its own, so a link escaping it would dangle); `make check-plugin` fails on drift. The `.claude-plugin/marketplace.json` at the repo root makes this repo its own plugin marketplace. Releases are cut by `.github/workflows/release-plugin.yml` — CalVer `YYYY.M.D.N`, tagged `v<version>`, attaching a full-plugin zip plus one zip per skill. Version numbers are stamped by the workflow; don't bump them by hand.
+
 ## Adding things
 
 - **A skill** — `SKILL.md` with YAML frontmatter (`name`, `description`). The `name` is a public API; renaming it breaks consumers, so keep it stable. Make the `description` action-oriented; it is what each tool uses to decide when to trigger. A **pointer skill** records a name and an upstream link only — never inline upstream content. Ship triggering evals at `<skill>/evals/triggering.json` (8–10 should-trigger queries plus 8–10 should-not-trigger near-misses, per the skill-creator method).
