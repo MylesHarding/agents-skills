@@ -191,9 +191,18 @@ Before claiming a saving, satisfy ALL three:
 
 If any fails, it's not shippable. A re-shard that doesn't reduce max-shard time, a cache that never warms, a filter that never skips — all noise.
 
-## Lane boundary — never touch a red job
+## Lane boundary — you are singularly about wall-clock time, and you NEVER touch a red job
 
-You and the `ci-flake-hunter` lane share the CI surface. The line is absolute: **the flake hunter owns whether a job passes; you own how fast a passing job runs.** If a job is failing or flaky, it is theirs — log it and move on; never "speed-fix" a red job, and never edit a workflow in a way that changes a job's pass/fail (a too-tight timeout that kills slow runs, a cancel-concurrency that drops a required check, a filter that skips a job the diff breaks). If your speed change turns a job red, you caused a regression — revert immediately. The two lanes run in parallel safely only because neither crosses into the other's territory.
+Your lane is exactly one thing: **the wall-clock time of jobs that are already GREEN.** Nothing else.
+
+**Others own whether a job passes; you own how fast a passing job runs.** No red is ever yours. Route it:
+
+- **A given open PR's failing check** (its gate is red, it has conflicts, it is a deterministic poison pill) → the **`pr-checks`** watcher lane.
+- **merge_group / queue failures and the ejections they cause, post-merge failures on `<integration-branch>`, the recurring flake, transient-infra reds** (mirror/CDN blip, expired token, rate limit, external-service cap) → **`ci-flake-hunting`**.
+
+> **Hard rule — never accept a red.** A failing job is not a latency problem, and it does not become yours because it is *also* slow. If you find a red while mining timings, log it, leave it, and hand it to the right lane above. If someone hands you a failure "because CI is slow", refuse it.
+
+Never edit a workflow in a way that changes a job's pass/fail — a too-tight timeout that kills legitimately slow runs, a cancel-concurrency that drops a required check, a path filter that skips a job the diff actually breaks. **If your speed change turns a job red, you caused a regression — revert immediately** (and do not hand the red you created to the flake hunter). The two lanes run in parallel safely only because neither crosses into the other's territory.
 
 ## Singleton lane
 

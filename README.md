@@ -143,6 +143,7 @@ These power the commands above (and the `/loop` watcher and CI-hunter lanes), so
 | `driving-prs-to-merge` | Gets an opened PR all the way to merged: CI triage, review threads, conflicts, merge queue. |
 | `pr-comments` · `pr-checks` · `pr-cleanup` | Single-lane interval watchers: one drives review threads to resolved and arms auto-merge, one keeps CI green and the merge queue healthy, one tidies up after PRs close. |
 | `ci-speed-hunting` · `ci-flake-hunting` | Continuous CI lanes: one mines timing to cut wall-clock latency without losing coverage, one root-causes flakes and fixes them forward — both to raise merge-queue throughput. |
+| `fast-forwarding-branches` | Keeps the primary checkout fast-forwarded on a loop so every worktree an agent cuts starts from a current base — and alerts, never clobbers, when the pull is blocked. |
 | `orchestrating-slots` | The N-slot loop that keeps a fixed number of agents working the queue. |
 | `gh-issue-filing` · `jira-issue-filing` | How to write a ticket an agent can build with no follow-up questions. |
 | `gh-issue-locking` · `jira-issue-locking` | Claims and locks tickets so two people never double-work the same one. |
@@ -181,6 +182,7 @@ These are the workers the commands spawn, plus the single-lane watchers and CI h
 | `pr-cleanup` | workhorse | `/loop` cleanup lane | Post-merge janitor: closes issues, releases locks, reclaims local disk. |
 | `ci-speed-hunter` | workhorse | `/loop` CI-speed lane | Mines CI timing and cuts wall-clock latency without losing coverage. |
 | `ci-flake-hunter` | workhorse | `/loop` CI-flake lane | Root-causes flaky jobs and fixes them forward; never masks. |
+| `branch-ff` | workhorse | `/loop` fast-forward lane | Keeps the primary checkout current with `pull --ff-only`; alerts, never clobbers. |
 | `diagnostician` | workhorse | `use-aws`, `use-chrome`, recon | Read-only AWS and browser repro that returns evidence. |
 | `verifier` | workhorse | dispatch, recon, spelunking | Verify-then-trust gate. Trusts no claim unchecked. |
 | `spelunker` | workhorse | `/spelunking-init-spec` | Maps one domain of a codebase into specs. |

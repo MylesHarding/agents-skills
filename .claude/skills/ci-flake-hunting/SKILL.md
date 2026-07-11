@@ -7,7 +7,28 @@ description: The authoritative method for hunting, root-causing, and fixing CI f
 
 A serial merge queue ejects the correct PR at the front the moment a flaky speculative build reds, AND disarms its auto-merge — the PR drops to a green-but-unqueued state and sits idle. So every live flake is a tax on *every* PR behind it. Killing one high-frequency flake measurably raises queue throughput; this is among the highest-leverage CI work there is.
 
-This skill pairs with the `ci-speed-hunting` skill (which owns CI *latency* — slow-but-green jobs; it never touches red/flaky jobs, you never touch timing/sharding) and the `test-driven-development` skill where available (whether the resulting test is well-shaped), and builds on the merge-queue mechanics in `driving-prs-to-merge`. Where a "make it pass" instinct conflicts with this skill's fix-forward rule, this skill wins.
+This skill pairs with the `ci-speed-hunting` skill and the `test-driven-development` skill where available (whether the resulting test is well-shaped), and builds on the merge-queue mechanics in `driving-prs-to-merge`. Where a "make it pass" instinct conflicts with this skill's fix-forward rule, this skill wins.
+
+## Lane — what you own, and the two lanes you are constantly confused with
+
+**Read this before anything else. Getting it backwards is the one mistake that strands a broken queue.**
+
+**You own the systemic hunt for instability.** Concretely, these are YOURS:
+
+- **merge_group / queue failures and the ejections they cause** — the speculative build reds, the correct PR at the front is ejected and its auto-merge disarmed. Killing that flake is the highest-leverage work there is.
+- **Post-merge failures on `<integration-branch>`** — a red that only shows up after the merge lands.
+- **The recurring flake itself** — a spec that fails then passes on retry with no code change, mined across CI history and killed permanently.
+- **Transient-infra reds** — classify (Step 0), re-run, open NO code PR. Classifying a red as infra *is* doing your job, not handing it away.
+
+**Two lanes you must not absorb, and must not hand your work to:**
+
+1. **`pr-checks` (the PR watcher) owns a given open PR's failing checks — not you.** When one PR's gate is red, that watcher unblocks *that PR* (re-run a transient, dispatch a fix for a real diff failure, dequeue and draft a deterministic poison pill, resolve conflicts). You do not babysit individual PRs' red checks. You may freely **mine** those failures as *evidence* to find a recurring flake — reading them is how you hunt — but owning the PR's route to green is theirs.
+
+2. **`ci-speed-hunting` owns exactly one thing: the wall-clock time of jobs that are already GREEN** (sharding, caching, path-filter tiering, the `needs:` graph). It is singularly focused on making CI faster and **never takes a red — not a queue red, not a post-merge red, not a flake, not an infra blip.**
+
+> **Hard rule — never hand a red to the speed lane.** A failing job is *never* a latency problem, and "it's red, so it belongs to `ci-speed-hunter`" is **always wrong**. If you catch yourself routing a failure to speed, stop. The only thing you ever hand to speed is a job that passes but is slow.
+
+The short version: **speed = slow-but-green. `pr-checks` = this PR's red. You = the instability itself** — the queue-ejecting flake, the post-merge red, the infra blip, hunted across history and fixed forward.
 
 ## Project bindings
 
