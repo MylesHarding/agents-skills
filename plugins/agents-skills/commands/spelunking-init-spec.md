@@ -1,6 +1,6 @@
 ---
 description: Deep-dive the codebase and distil it into living, numerically-referenced domain specs — spawn survey agents to auto-discover the domains, fan out one agent per domain to infer conventions/standards/assumptions/invariants with verified file:line evidence, verify the claims, and write the spec set (specs/<ref>-<slug>.spec.md + specs/_index.md) beside the code. For onboarding to or mapping an unknown/evolving app. Optional path/domain args scope the dive. Example — /spelunking-init-spec, or /spelunking-init-spec src/payments
-argument-hint: "[path | domain ...] [model:sonnet|opus|fable] [effort:low|medium|high|max]"
+argument-hint: "[path | domain ...] [model:sonnet|opus] [effort:low|medium|high|max]"
 allowed-tools: Glob, Grep, Read, Write, Edit, Bash(git rev-parse:*), Bash(git log:*), Bash(git mv:*)
 ---
 

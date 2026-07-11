@@ -36,7 +36,7 @@ placeholder everywhere below.
 | --- | --- | --- |
 | `<workhorse-model>` | Default model for all code-writing dispatches | `sonnet` |
 | `<cheap-model>` | Model for narrow mechanical tasks only — deliberately has NO label | `haiku` |
-| `<premium-models>` | Operator-gated high-attention models (one label each) | `opus`, `fable` |
+| `<premium-models>` | Operator-gated high-attention models (one label each) | `opus` |
 | `<jira-project-key>` | Project key for JQL `project =` clauses and issue keys | `PROJ` |
 | `<jira-site>` / cloudId | The Jira site/cloud the MCP is connected to | resolve dynamically |
 | `<jira-done-status>` | Workflow status that closes an issue | `Done` |

@@ -80,8 +80,8 @@ per location (`:NN-MM` for ranges):
 
 ```
 Example:
-- `apps/web/src/lib/billing.ts:120` — invoice row click handler
-- `apps/web/src/…/status-pills.tsx:83-129` — pill render
+- `src/payments/lib/billing.ts:120` — invoice row click handler
+- `src/payments/…/status-pills.tsx:83-129` — pill render
 ```
 
 Grep to confirm every cited line number immediately before filing — stale line

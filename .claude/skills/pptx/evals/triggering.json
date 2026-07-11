@@ -73,7 +73,7 @@
     "note": "Near-miss: originated as a deck, but no .pptx is touched — the whole task is PDF merging."
   },
   {
-    "query": "Pull the numbers behind these five slides into a spreadsheet so finance can reconcile them line by line.",
+    "query": "Pull the numbers behind these five slides into a spreadsheet so accounting can reconcile them line by line.",
     "should_trigger": false,
     "expected": "xlsx",
     "note": "Near-miss: slides are mentioned, but the deliverable is a spreadsheet file."
@@ -91,7 +91,7 @@
     "note": "Near-miss: messy tabular cleanup, which xlsx owns; nothing presentational about it."
   },
   {
-    "query": "Extract the two financial tables from the board packet PDF and tell me what the burn rate line says.",
+    "query": "Extract the two data tables from the board packet PDF and tell me what the burn rate line says.",
     "should_trigger": false,
     "expected": "pdf",
     "note": "Near-miss: board-meeting context, but a read-only PDF extraction."

@@ -1,5 +1,5 @@
 [
-  {"query": "Greptile left six comments on PR #412 and it's been sitting there all morning — deal with them.", "should_trigger": true, "expected": "pr-comments", "note": "Bot review threads on an open agent PR: apply-or-counter, then resolve."},
+  {"query": "The review bot left six comments on PR #412 and it's been sitting there all morning — deal with them.", "should_trigger": true, "expected": "pr-comments", "note": "Bot review threads on an open agent PR: apply-or-counter, then resolve."},
   {"query": "All my PRs are green but none of them are merging. Nothing's red.", "should_trigger": true, "expected": "pr-comments", "note": "The classic symptom of unresolved review threads blocking auto-merge — check threads FIRST."},
   {"query": "Start the pr-comments lane on a 5 minute loop.", "should_trigger": true, "expected": "pr-comments", "note": "Named invocation of the watcher lane this skill backs."},
   {"query": "Should I turn on auto-merge for #388 yet, or wait for the review bot to weigh in?", "should_trigger": true, "expected": "pr-comments", "note": "The arm/disarm gate — this lane owns the initial arm-after-bot-review."},

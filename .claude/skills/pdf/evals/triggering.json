@@ -36,7 +36,7 @@
     "note": "Watermarking a PDF."
   },
   {
-    "query": "Put a password on the payroll summary PDF, and strip the owner password off vendor-terms.pdf — I have the rights to it, it's just locked against copy-paste.",
+    "query": "Put a password on the quarterly summary PDF, and strip the owner password off vendor-terms.pdf — I have the rights to it, it's just locked against copy-paste.",
     "should_trigger": true,
     "expected": "pdf",
     "note": "Encrypt/decrypt PDFs, both named in the description."

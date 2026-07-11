@@ -1,6 +1,6 @@
 ---
 description: Technical recon of groomed-but-unvetted GitHub issue(s) — drop one or more issue numbers and dispatch a read-only sub-agent per issue (in parallel) to trace the ask into the codebase, produce a verified implementation approach, assert a level-of-effort estimate with confidence, surface risks/dependencies, recommend a split when too big, and post findings back + move the issue to a dev-vetted state. For an eng/project lead sizing accepted work before any code is written. Example — /gh-issue-recon 412 415 418 model:opus
-argument-hint: <issue#> [issue# ...] [model:sonnet|opus|fable] [effort:low|medium|high|max]
+argument-hint: <issue#> [issue# ...] [model:sonnet|opus] [effort:low|medium|high|max]
 agent: agent
 ---
 

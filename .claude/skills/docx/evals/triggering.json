@@ -67,7 +67,7 @@
     "note": "Near-miss: the input is a Word file, but the deliverable is a presentation. Deliverable format decides."
   },
   {
-    "query": "Pull the four financial tables out of annual-report.docx and give me a spreadsheet I can sort and filter by line item.",
+    "query": "Pull the four data tables out of annual-report.docx and give me a spreadsheet I can sort and filter by line item.",
     "should_trigger": false,
     "expected": "xlsx",
     "note": "Near-miss: reads a .docx, but the output is a spreadsheet file — xlsx owns spreadsheet deliverables."
