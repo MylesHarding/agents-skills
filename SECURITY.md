@@ -2,7 +2,7 @@
 
 ## What this repo is
 
-A collection of AI **skills, slash commands, and agent definitions** (Markdown plus a couple of small scripts) for Claude Code, Cursor, and GitHub Copilot. There is no running service and no application code. The security surface is therefore about **what these artifacts instruct an AI agent to do**, and about keeping the repo free of sensitive data.
+A collection of AI **skills, slash commands, and agent definitions** (Markdown plus a couple of small scripts) for Claude Code, Cursor, GitHub Copilot, Kiro, and OpenCode — also published as a Claude Code plugin. There is no running service and no application code. The security surface is therefore about **what these artifacts instruct an AI agent to do**, and about keeping the repo free of sensitive data.
 
 ## Reporting a vulnerability
 
@@ -11,7 +11,7 @@ Report privately. Do **not** open a public issue for a security problem.
 - Preferred: GitHub's private vulnerability reporting — the repo's **Security** tab, then **Report a vulnerability**.
 - Or email **security@nickadams.guru**.
 
-Include the artifact involved, the risky behavior, and a repro or proof of concept. Expect an acknowledgement within a few days. There are no released versions; the supported version is the latest `main`, and fixes land there.
+Include the artifact involved, the risky behavior, and a repro or proof of concept. Expect an acknowledgement within a few days. The supported version is the latest `main` and the newest published release; fixes land on `main` and ship in the next release.
 
 ## In scope
 
