@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for improving this toolbox. It is a shareable set of **skills, slash commands, and agents** for Claude Code, Cursor, and GitHub Copilot. A few rules keep it clean and consistent.
+Thanks for improving this toolbox. It is a shareable set of **skills, slash commands, and agents** for Claude Code, Cursor, GitHub Copilot, Kiro, and OpenCode. A few rules keep it clean and consistent.
 
 ## The one hard rule: no private data
 
@@ -22,7 +22,7 @@ Canonical sources live under `.claude/`:
 Commands and agents are **generated** into the Cursor, Copilot, Kiro, and OpenCode homes (`.cursor/`, `.github/prompts/`, `.github/agents/`, `.kiro/agents/`, `.opencode/agents/`). **Never hand-edit those mirrors.** After editing a command or agent:
 
 ```
-make sync     # regenerate the Cursor + Copilot mirrors
+make sync     # regenerate every mirror and both plugin payloads
 make check    # fails if anything drifted — run this in CI
 ```
 
@@ -30,7 +30,7 @@ Skills are read directly from `.claude/skills/` by Claude Code, Cursor, and Copi
 
 Git hook templates live under `hooks/` (plain POSIX `sh` + CI workflow templates). They are shareable, not wired to this repo, and have no mirror — keep them dependency-free and generic, with every external tool optional (skip-if-absent). See [`hooks/README.md`](hooks/README.md).
 
-`plugins/agents-skills/` is the **published Claude plugin payload — generated, never hand-edited.** `make build-plugin` rebuilds it from `.claude/{skills,agents,commands}` (real copies, not symlinks: Claude Code installs the plugin directory on its own, so a link escaping it would dangle); `make check-plugin` fails on drift. The `.claude-plugin/marketplace.json` at the repo root makes this repo its own plugin marketplace. Releases are cut by `.github/workflows/release-plugin.yml` — CalVer `YYYY.M.D.N`, tagged `v<version>`, attaching a full-plugin zip plus one zip per skill. Version numbers are stamped by the workflow; don't bump them by hand.
+`plugins/agents-skills/` (Claude Code) and `plugins/agents-skills-cursor/` (Cursor) are the **published plugin payloads — generated, never hand-edited.** `make build-plugin` rebuilds both. They share the same skills, and each takes its agents and commands from that tool's mirror (`.claude/` or `.cursor/`), because the frontmatter differs (real copies, not symlinks: Claude Code installs the plugin directory on its own, so a link escaping it would dangle); `make check-plugin` fails on drift. The `.claude-plugin/marketplace.json` and `.cursor-plugin/marketplace.json` at the repo root make this repo its own plugin marketplace in both ecosystems. Releases are cut by `.github/workflows/release-plugin.yml` — CalVer `YYYY.M.D.N`, tagged `v<version>`, attaching both plugin zips plus one zip per skill. Version numbers are stamped by the workflow; don't bump them by hand.
 
 ## Adding things
 

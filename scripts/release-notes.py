@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate GitHub release notes from the built plugin payload.
+"""Generate GitHub release notes from the built plugin payloads.
 
-Reads the plugin manifest plus the skills/agents/commands actually packaged, and
-emits markdown for `gh release create --notes-file`.
+Reads the Claude payload for the inventory (both payloads carry the same skills, and
+the agents and commands differ only in frontmatter) and emits markdown for
+`gh release create --notes-file`.
 
   python3 scripts/release-notes.py 2026.7.11.0 > dist/notes.md
 """
@@ -14,7 +15,7 @@ REPO = "skyfox675/agents-skills"
 
 
 def frontmatter_description(path):
-    """Pull the one-line `description:` out of a SKILL.md / agent frontmatter block."""
+    """Pull the one-line `description:` out of a SKILL.md or agent frontmatter block."""
     try:
         text = open(path, encoding="utf-8").read()
     except OSError:
@@ -45,21 +46,29 @@ def main():
     commands = [f[:-3] for f in listing("commands") if f.endswith(".md")]
 
     out = []
-    out.append(f"**{manifest['name']} v{version}** — {len(skills)} skills, "
-               f"{len(agents)} agents, {len(commands)} slash commands.")
+    out.append(f"**{manifest['name']} v{version}** with {len(skills)} skills, "
+               f"{len(agents)} agents, and {len(commands)} slash commands.")
     out.append("")
-    out.append("## Install (Claude Code)")
+    out.append("## Install")
+    out.append("")
+    out.append("Claude Code:")
     out.append("")
     out.append("```")
     out.append(f"/plugin marketplace add {REPO}")
     out.append(f"/plugin install {manifest['name']}@agents-skills")
     out.append("```")
     out.append("")
+    out.append("Cursor: install `agents-skills` from the Cursor plugin marketplace, or point "
+               f"Cursor at this repository ({REPO}), which carries its own "
+               "`.cursor-plugin/marketplace.json`.")
+    out.append("")
     out.append("## Downloads")
     out.append("")
-    out.append("- `agents-skills-plugin.zip` — the full plugin (manifest, skills, agents, commands).")
-    out.append("- `<skill>.zip` — one zip per skill, for Claude Desktop "
-               "(Settings → Capabilities → Skills → upload).")
+    out.append("- `agents-skills-plugin.zip` is the Claude Code plugin (manifest, skills, agents, commands).")
+    out.append("- `agents-skills-cursor-plugin.zip` is the Cursor plugin (same skills, with Cursor's "
+               "agent and command formats).")
+    out.append("- `<skill>.zip` is one zip per skill, for Claude Desktop. Upload under Settings, then "
+               "Capabilities, then Skills.")
     out.append("")
 
     out.append(f"## Skills ({len(skills)})")
@@ -67,8 +76,7 @@ def main():
     out.append("| Skill | What it does |")
     out.append("|---|---|")
     for s in skills:
-        desc = frontmatter_description(os.path.join(PLUGIN, "skills", s, "SKILL.md"))
-        out.append(f"| `{s}` | {desc} |")
+        out.append(f"| `{s}` | {frontmatter_description(os.path.join(PLUGIN, 'skills', s, 'SKILL.md'))} |")
     out.append("")
 
     out.append(f"## Agents ({len(agents)})")
@@ -76,8 +84,7 @@ def main():
     out.append("| Agent | What it does |")
     out.append("|---|---|")
     for a in agents:
-        desc = frontmatter_description(os.path.join(PLUGIN, "agents", a + ".md"))
-        out.append(f"| `{a}` | {desc} |")
+        out.append(f"| `{a}` | {frontmatter_description(os.path.join(PLUGIN, 'agents', a + '.md'))} |")
     out.append("")
 
     out.append(f"## Slash commands ({len(commands)})")

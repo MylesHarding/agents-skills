@@ -13,16 +13,20 @@ The whole set is tuned to get an accurate answer for as few tokens as it can man
 
 Do the Quickstart for whichever tool you use. The full inventory is under [What's included](#whats-included).
 
-## Install as a Claude Code plugin
+## Install as a plugin
 
-On Claude Code this is the short path. The repo is its own plugin marketplace, so you get every skill, agent, and command in two lines with no files to copy:
+This repo is its own plugin marketplace for both Claude Code and Cursor, so on either tool you get every skill, agent, and command without copying files.
+
+On Claude Code, two lines:
 
 ```
 /plugin marketplace add skyfox675/agents-skills
 /plugin install agents-skills@agents-skills
 ```
 
-Every [release](https://github.com/skyfox675/agents-skills/releases) also attaches `agents-skills-plugin.zip`, which is the whole plugin, plus one zip per skill. The per-skill zips exist for Claude Desktop, where you upload them under Settings, then Capabilities, then Skills. Releases are versioned `YYYY.M.D.N` and tagged `v<version>`.
+On Cursor, install `agents-skills` from the plugin marketplace, or point Cursor at this repository. It carries a `.cursor-plugin/marketplace.json` at the root, so Cursor can source the plugin straight from git.
+
+Every [release](https://github.com/skyfox675/agents-skills/releases) attaches both plugins, `agents-skills-plugin.zip` for Claude Code and `agents-skills-cursor-plugin.zip` for Cursor, plus one zip per skill. The per-skill zips exist for Claude Desktop, where you upload them under Settings, then Capabilities, then Skills. Releases are versioned `YYYY.M.D.N` and tagged `v<version>`.
 
 For any other tool, or if you would rather copy the raw files into your own project, use the Quickstart.
 
@@ -68,7 +72,9 @@ Try it: `/gh-issue the export button on the reports page does nothing`.
 
 &nbsp;
 
-Cursor reads skills from `.claude/skills/`, commands from `.cursor/commands/`, and agents from `.cursor/agents/`, all of which are already in this repo. To use them in your own project, copy this repo's `.cursor/` and `.claude/skills/` folders into your project root. Type `/` in chat to see the commands. For the Jira, AWS, browser, and Figma flows, add the matching MCP (see [MCPs and external tools](#mcps-and-external-tools)).
+The short path is the plugin: install `agents-skills` from Cursor's plugin marketplace, or point Cursor at this repository, which carries its own `.cursor-plugin/marketplace.json`. That gets you every skill, agent, and command at once.
+
+To wire it up by hand instead: Cursor reads skills from `.claude/skills/`, commands from `.cursor/commands/`, and agents from `.cursor/agents/`, all of which are already in this repo. To use them in your own project, copy this repo's `.cursor/` and `.claude/skills/` folders into your project root. Type `/` in chat to see the commands. For the Jira, AWS, browser, and Figma flows, add the matching MCP (see [MCPs and external tools](#mcps-and-external-tools)).
 
 Install the helper skills by pasting this to Cursor:
 

@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
-"""Stamp a version into the plugin and marketplace manifests.
+"""Stamp a version into every plugin and marketplace manifest.
 
-Versions are CalVer with a patch counter — YYYY.M.D.N — so several releases on the
-same day never collide (the first of a day is `.0`). The release workflow computes
-the next free N by probing existing `v<version>` tags.
+Four manifests, two ecosystems:
+
+  plugins/agents-skills/.claude-plugin/plugin.json          Claude plugin
+  .claude-plugin/marketplace.json                           Claude marketplace
+  plugins/agents-skills-cursor/.cursor-plugin/plugin.json   Cursor plugin
+  .cursor-plugin/marketplace.json                           Cursor marketplace
+
+Versions are CalVer with a patch counter, YYYY.M.D.N, so several releases on the same
+day never collide (the first of a day is `.0`). The release workflow computes the next
+free N by probing existing `v<version>` tags. Both ecosystems ship the same version.
 
   python3 scripts/set-version.py 2026.7.11.0
 """
@@ -12,8 +19,14 @@ import json, os, re, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VERSION_RE = re.compile(r"^\d{4}\.\d{1,2}\.\d{1,2}\.\d+$")
 
-PLUGIN_MANIFEST = os.path.join("plugins", "agents-skills", ".claude-plugin", "plugin.json")
-MARKETPLACE_MANIFEST = os.path.join(".claude-plugin", "marketplace.json")
+PLUGIN_MANIFESTS = [
+    os.path.join("plugins", "agents-skills", ".claude-plugin", "plugin.json"),
+    os.path.join("plugins", "agents-skills-cursor", ".cursor-plugin", "plugin.json"),
+]
+MARKETPLACE_MANIFESTS = [
+    os.path.join(".claude-plugin", "marketplace.json"),
+    os.path.join(".cursor-plugin", "marketplace.json"),
+]
 
 
 def main():
@@ -29,8 +42,10 @@ def main():
         for plugin in doc.get("plugins", []):
             plugin["version"] = version
 
-    for rel, mutate in ((PLUGIN_MANIFEST, stamp_plugin),
-                        (MARKETPLACE_MANIFEST, stamp_marketplace)):
+    targets = [(rel, stamp_plugin) for rel in PLUGIN_MANIFESTS]
+    targets += [(rel, stamp_marketplace) for rel in MARKETPLACE_MANIFESTS]
+
+    for rel, mutate in targets:
         path = os.path.join(ROOT, rel)
         with open(path) as f:
             doc = json.load(f)
