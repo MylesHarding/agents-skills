@@ -221,6 +221,7 @@ Install: `sh hooks/install.sh` (points `core.hooksPath` at `hooks/`), then copy 
 
 ## Going deeper
 
+- [`GLOSSARY.md`](GLOSSARY.md) defines the terms this repo uses in a specific way: slot, dispatcher, watcher, hunting, ci-speed, flake. Read it first if the lane names look interchangeable.
 - [`MODEL-DEFAULTS.md`](MODEL-DEFAULTS.md) covers which model each task uses, per platform, and how to save tokens.
 - [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md) cover the conventions, the model policy, and how the three tools stay in sync.
 - [`.claude/skills/`](.claude/skills) holds every skill. The pointer skills list their own install steps.

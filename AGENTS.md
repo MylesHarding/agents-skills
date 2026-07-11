@@ -18,6 +18,7 @@ Because it is public and reusable, every artifact must be **clean of personal an
 - `.claude/settings.json` — Claude Code config (`model: opus`, `includeCoAuthoredBy: false`).
 - `CLAUDE.md` — Claude Code's copy of this guidance.
 - `README.md` — human entry point.
+- `GLOSSARY.md` — the repo's vocabulary (slot, dispatcher, watcher, hunting, ci-speed, flake). The distinctions are load-bearing.
 
 ## Two kinds of skill
 

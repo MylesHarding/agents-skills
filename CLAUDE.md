@@ -21,6 +21,8 @@ Skills and Agents are the two primary artifact types. The canonical homes are th
 
 When adding the first artifacts, create these directories. Top-level `README.md` is the human entry point.
 
+[`GLOSSARY.md`](GLOSSARY.md) defines the vocabulary the artifacts assume: **slot**, **dispatcher**, **watcher**, **hunting**, **ci-speed**, **flake**, plus lane, tick, primary checkout, and singleton. The watcher/hunter and speed/flake distinctions are load-bearing: several skills refuse work on the strength of them, so keep new artifacts consistent with these definitions.
+
 ## Two kinds of skill
 
 1. **Self-contained skills** — the full instructions live here.
