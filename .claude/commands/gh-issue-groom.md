@@ -1,6 +1,6 @@
 ---
 description: Groom a not-yet-dev-ready GitHub issue (pre-technical-recon) — drop one or more issue numbers and dispatch an agent per issue to ask the engineering/project lead about intent, scope, and direction until ≥90% certain the written story reflects the ask, then fill the body to the six-section groomed anatomy. Never modifies existing acceptance criteria unless the operator explicitly asks. Asks via the interactive question tool when available, else emoji-answerable comments; rerun to continue after answers. Example — /gh-issue-groom 530 531
-argument-hint: <issue#> [issue# ...] [model:sonnet|opus] [effort:low|medium|high|max]
+argument-hint: <issue#> [issue# ...] [model:sonnet|opus|fable] [effort:low|medium|high|max]
 allowed-tools: Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue list:*), Bash(gh label list:*)
 ---
 

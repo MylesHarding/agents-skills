@@ -18,7 +18,7 @@ Default the loop **and** verification to **workhorse**; escalate to premium only
 
 | Tier | Claude Code | GitHub Copilot | Cursor |
 |---|---|---|---|
-| premium *(gated)* | Opus 4.8 | Claude Opus 4.8 / GPT-5.5 | Premium mode (Opus 4.8) |
+| premium *(gated)* | Opus 4.8 · Fable 5 | Claude Opus 4.8 / GPT-5.5 | Premium mode (Opus 4.8) |
 | workhorse *(default)* | Sonnet 4.6 | Claude Sonnet 4.6 | Sonnet 4.6 / Composer 2.5 |
 | cheap / mechanical | Haiku 4.5 | Raptor Mini / GPT-5.4-mini / Haiku 4.5 | Auto *(free)* / Gemini 3.5 Flash / Grok Build 0.1 |
 

@@ -17,7 +17,7 @@
 #                   way to detect which model is your cheap tier; the convention
 #                   (no cheap-tier label) is your responsibility to enforce by
 #                   omitting that identifier from the argument list.
-#                   Example: sonnet opus
+#                   Example: sonnet opus fable
 #
 # Deliberately absent: a label for the cheap model tier. The label family grants
 # or pins spending authority only — it must not allow forcing code-writing work
@@ -47,7 +47,7 @@ shift $((OPTIND - 1))
 
 if [ "$#" -eq 0 ]; then
   echo "Usage: bootstrap-labels.sh [-R owner/repo] workhorse-model [premium-model ...]" >&2
-  echo "  Example: bootstrap-labels.sh -R acme/widgets sonnet opus" >&2
+  echo "  Example: bootstrap-labels.sh -R acme/widgets sonnet opus fable" >&2
   echo "  Pass ONLY workhorse + premium identifiers; omit your cheap-tier model." >&2
   exit 2
 fi

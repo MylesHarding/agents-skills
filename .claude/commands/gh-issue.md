@@ -1,6 +1,6 @@
 ---
 description: File a groomed, dispatchable GitHub issue from a breadcrumb (component/page/object) plus a problem description — recon the code, verify evidence, dedupe, label, file. Optionally pin the dispatch model/effort. Example — /gh-issue "Settings > Billing > Invoice row" clicking an invoice opens a 404 model:opus effort:high
-argument-hint: <breadcrumb> <description of the issue> [model:sonnet|opus] [effort:low|medium|high|max]
+argument-hint: <breadcrumb> <description of the issue> [model:sonnet|opus|fable] [effort:low|medium|high|max]
 allowed-tools: Bash(gh issue create:*), Bash(gh issue list:*), Bash(gh label list:*), Bash(gh search:*)
 ---
 
@@ -11,7 +11,7 @@ Arguments: `$ARGUMENTS`
 Parse them as:
 
 - The first token (or quoted phrase) is the **breadcrumb** — a UI path (`Settings > Billing > Invoice row`), a route (`/dashboard`), a component or object name, or a file path.
-- Optional `model:<tier>` and `effort:<level>` tokens may appear **anywhere** in the arguments. Strip them out before reading the rest. Valid tiers/levels come from the gh-issue-labels skill's taxonomy (model: `sonnet` | `opus`; effort: `low` | `medium` | `high` | `max`, adjusted to the project's bound model lineup). An unrecognized value is a typo — warn the operator and file without that label rather than inventing one.
+- Optional `model:<tier>` and `effort:<level>` tokens may appear **anywhere** in the arguments. Strip them out before reading the rest. Valid tiers/levels come from the gh-issue-labels skill's taxonomy (model: `sonnet` | `opus` | `fable`; effort: `low` | `medium` | `high` | `max`, adjusted to the project's bound model lineup). An unrecognized value is a typo — warn the operator and file without that label rather than inventing one.
 - Everything else is the **description** of the problem as the operator experienced it.
 
 Example: `/gh-issue "Settings > Billing > Invoice row" clicking an invoice opens a 404 model:opus effort:high`

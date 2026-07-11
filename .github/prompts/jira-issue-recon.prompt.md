@@ -1,6 +1,6 @@
 ---
 description: Technical recon of groomed-but-unvetted Jira issue(s) — drop one or more issue keys and dispatch a read-only sub-agent per issue (in parallel) to trace the ask into the codebase, produce a verified implementation approach, assert a level-of-effort estimate with confidence, surface risks/dependencies, recommend a split when too big, and post findings back via the Atlassian MCP + move the issue to a dev-vetted state. For an eng/project lead sizing accepted work before any code is written. Example — /jira-issue-recon PROJ-412 PROJ-415 PROJ-418 model:opus
-argument-hint: <issue-key> [issue-key ...] [model:sonnet|opus] [effort:low|medium|high|max]
+argument-hint: <issue-key> [issue-key ...] [model:sonnet|opus|fable] [effort:low|medium|high|max]
 agent: agent
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Groom a not-yet-dev-ready Jira issue (pre-technical-recon) — drop one or more issue keys and dispatch an agent per issue to ask the engineering/project lead about intent, scope, and direction until ≥90% certain the written story reflects the ask, then fill the description to the six-section groomed anatomy via the Atlassian MCP. Never modifies existing acceptance criteria unless the operator explicitly asks. Asks via the interactive question tool when available, else emoji-answerable comments; rerun to continue after answers. Example — /jira-issue-groom PROJ-530 PROJ-531
-argument-hint: <issue-key> [issue-key ...] [model:sonnet|opus] [effort:low|medium|high|max]
+argument-hint: <issue-key> [issue-key ...] [model:sonnet|opus|fable] [effort:low|medium|high|max]
 agent: agent
 ---
 

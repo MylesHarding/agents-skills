@@ -1,6 +1,6 @@
 ---
 description: Refresh the living codebase specs after the code has moved — re-recon a spec reference, a domain, a path, or (no arg) the stalest specs; diff each against current code, update discovered behaviour and conventions in place, transition confidence with evidence, flag regressions as drift, append new references for newly-found domains/instances, and re-sync specs/_index.md. Git is the version history; references are never renumbered or deleted (deprecated instead). Example — /spelunking-refresh-spec 1.2, or /spelunking-refresh-spec src/auth
-argument-hint: "[ref | domain | path ...] [model:sonnet|opus] [effort:low|medium|high|max]"
+argument-hint: "[ref | domain | path ...] [model:sonnet|opus|fable] [effort:low|medium|high|max]"
 allowed-tools: Glob, Grep, Read, Write, Edit, Bash(git rev-parse:*), Bash(git log:*), Bash(git diff:*), Bash(git mv:*)
 ---
 

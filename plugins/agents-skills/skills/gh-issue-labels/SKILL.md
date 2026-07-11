@@ -28,7 +28,7 @@ placeholder everywhere below.
 | --- | --- | --- |
 | `<workhorse-model>` | Default model for all code-writing dispatches | `sonnet` |
 | `<cheap-model>` | Model for narrow mechanical tasks only — deliberately has NO label | `haiku` |
-| `<premium-models>` | Operator-gated high-attention models (one label each) | `opus` |
+| `<premium-models>` | Operator-gated high-attention models (one label each) | `opus`, `fable` |
 | `<integration-branch>` | Branch PRs target (affects close-on-merge, see gh-issue-locking) | `dev` |
 | `<repo-slug>` | `org/repo` for `--repo` flags in label REST calls; see gh-issue-filing for the canonical definition | `acme/widgets` |
 | `<auto-rebase-automation>` | Whatever workflow/bot rebases open PRs onto `<integration-branch>` | a scheduled auto-rebase workflow |
@@ -265,7 +265,7 @@ the same names, `--force` overwrites their color/description — the script echo
 ```
 scripts/bootstrap-labels.sh [-R owner/repo] workhorse-model premium-model ...
 # Example:
-scripts/bootstrap-labels.sh -R acme/widgets sonnet opus
+scripts/bootstrap-labels.sh -R acme/widgets sonnet opus fable
 ```
 
 Model identifiers are **required** positional arguments. The first is the workhorse
