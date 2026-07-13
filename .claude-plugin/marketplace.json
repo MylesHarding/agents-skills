@@ -5,7 +5,7 @@
     "url": "https://github.com/skyfox675"
   },
   "metadata": {
-    "description": "A toolbox of skills, agents, and slash commands for AI coding assistants — multi-agent orchestration, PR/CI lanes, issue filing and grooming, codebase and design spec mapping.",
+    "description": "A toolbox of skills, agents, and slash commands for AI coding assistants \u2014 multi-agent orchestration, PR/CI lanes, issue filing and grooming, codebase and design spec mapping.",
     "version": "1.0.0"
   },
   "plugins": [
@@ -13,7 +13,7 @@
       "name": "agents-skills",
       "source": "./plugins/agents-skills",
       "description": "Skills, agents, and slash commands for AI coding assistants: dispatch and orchestration, driving PRs to merge, the pr-comments/pr-checks/pr-cleanup watcher lanes, the ci-speed-hunter/ci-flake-hunter CI lanes, GitHub and Jira issue filing/grooming/locking, technical recon, codebase spelunking, Figma design specs, and browser diagnosis.",
-      "version": "0.0.0",
+      "version": "2026.7.13.0",
       "author": {
         "name": "skyfox675"
       },

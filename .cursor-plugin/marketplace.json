@@ -8,7 +8,7 @@
     {
       "name": "agents-skills",
       "source": "./plugins/agents-skills-cursor",
-      "version": "0.0.0",
+      "version": "2026.7.13.0",
       "description": "Skills, subagents, and slash commands for AI coding: dispatch and orchestration, driving PRs to merge, the PR watcher lanes, the CI speed and flake hunter lanes, GitHub and Jira issue filing, grooming and locking, technical recon, codebase spelunking, Figma design specs, and browser diagnosis.",
       "author": {
         "name": "skyfox675"

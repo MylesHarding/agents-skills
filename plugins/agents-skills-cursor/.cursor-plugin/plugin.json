@@ -1,6 +1,6 @@
 {
   "name": "agents-skills",
-  "version": "0.0.0",
+  "version": "2026.7.13.0",
   "description": "Skills, subagents, and slash commands for AI coding: multi-agent dispatch and slot orchestration, driving PRs to merge, the pr-comments/pr-checks/pr-cleanup watcher lanes, the ci-speed-hunter/ci-flake-hunter CI lanes, GitHub and Jira issue filing/grooming/locking, technical recon, codebase spelunking, Figma design specs, and browser diagnosis.",
   "author": {
     "name": "skyfox675"
