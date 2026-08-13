@@ -1,0 +1,15 @@
+[
+  {"query": "Issue #42 in this meta repo has repo:example-api on it — where does the actual work happen?", "should_trigger": true, "expected": "registry-dispatch", "note": "Resolving a repo:<name> label against the registry is exactly this skill's job."},
+  {"query": "Before I lock this candidate, how do I look up which target repo it belongs to?", "should_trigger": true, "expected": "registry-dispatch", "note": "The resolution step (resolve-repo.py) runs before locking."},
+  {"query": "This repo has a registry/repos.yaml — how do I get a worktree ready for a dispatch that targets one of those entries?", "should_trigger": true, "expected": "registry-dispatch", "note": "ensure-worktree.sh provisioning is this skill's mechanism."},
+  {"query": "The PR for this dispatch needs to land in a different repo than the issue — how does the tracking issue get closed?", "should_trigger": true, "expected": "registry-dispatch", "note": "Cross-repo Closes owner/repo#N syntax is documented here."},
+  {"query": "An issue has repo:some-name but that name isn't in the registry — is it dispatchable?", "should_trigger": true, "expected": "registry-dispatch", "note": "Unresolvable repo:<name> is a not-dispatchable exclusion, defined here."},
+  {"query": "We're setting up a meta repo pattern — issues track backlog here but code lives in other repos. What changes about dispatch?", "should_trigger": true, "expected": "registry-dispatch", "note": "This is the core scenario the skill exists for."},
+
+  {"query": "Fill 8 slots — dev:5 rescue:1 flex:2 — and start the loop.", "should_trigger": false, "expected": "orchestrating-slots", "note": "Ordinary single-repo slot filling; no repo:<name> label or registry involved."},
+  {"query": "Pin issue #88 to opus and set its effort to high.", "should_trigger": false, "expected": "gh-issue-labels", "note": "Model/effort label taxonomy, not repo resolution."},
+  {"query": "Write the eight-section dispatch brief for issue #12 on the workhorse model.", "should_trigger": false, "expected": "dispatching-subagents", "note": "Brief construction itself; registry-dispatch only changes cwd/PR-target fields inside it, doesn't own the template."},
+  {"query": "Lock issue #205 and post the claim comment before dispatch.", "should_trigger": false, "expected": "gh-issue-locking", "note": "Claim/lock protocol is unchanged by meta-repo mode — still operates on the meta repo's issue."},
+  {"query": "This repo is a normal single-repo project with no registry.yaml — just dispatch #40 normally.", "should_trigger": false, "expected": "orchestrating-slots", "note": "No registry present — ordinary single-repo dispatch, this skill explicitly doesn't apply."},
+  {"query": "PR #501 in our main product repo is DIRTY and failing CI — rescue it.", "should_trigger": false, "expected": "driving-prs-to-merge", "note": "Ordinary single-repo PR rescue; no cross-repo issue/PR split involved."}
+]

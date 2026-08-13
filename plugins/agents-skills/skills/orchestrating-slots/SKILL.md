@@ -63,6 +63,8 @@ gh pr list --search "Closes #<N>" --state open
 ```
 
    The `(.assignees | length == 0)` filter is the multi-operator race guard — triage labels lie (in real use, `ready-to-dispatch` persisted after a peer claimed, double-locking 4 issues). Re-verify assignees are empty immediately before each lock; if the race re-check finds an active lock, drop the candidate and take the next rather than contest it. The open-PR probe catches "zombie" issues whose fix is already in flight or merged-but-unclosed.
+
+   **Meta-repo variant**: if this repo holds a `registry/repos.yaml`, candidates may carry a `repo:<name>` label pointing at a different repo entirely — resolve and provision it per the **registry-dispatch** skill before locking, and treat an unresolvable name as excluded, same as `blocked`.
 4. **Fill slots P0 → P1 → P2**, ascending `createdAt` within tier. Bundle same-surface issues (same page, same module) into a single dispatch — one agent, one worktree, one PR — instead of three agents racing on one file. Lock each issue per the issue-locking skill *before* dispatching; brief per the dispatching-subagents skill.
 5. **Reserve headroom**: keep ~25% of slots (2 of 8) free for inbound events. A fully-saturated orchestrator cannot rescue, sweep, or react, and events always come.
 

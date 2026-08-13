@@ -17,7 +17,9 @@ dispatching-subagents skill; the claim/lock/release protocol behind `agent-claim
 lives in the gh-issue-locking skill; the slot loop that reads these labels every round
 lives in the orchestrating-slots skill; PR-side mechanics behind `do-not-rebase` live
 in the driving-prs-to-merge skill. The Jira equivalent (Jira fields/labels instead of
-GitHub labels) is the `jira-issue-fields` skill.
+GitHub labels) is the `jira-issue-fields` skill. In a meta repo (holds a
+`registry/repos.yaml`), the `repo:<name>` label below is resolved by the
+**registry-dispatch** skill before any other label in this taxonomy is consulted.
 
 ## Project bindings
 
@@ -56,6 +58,7 @@ but the string comparison in jq is not.
 | `do-not-dispatch` | Issues | Operator only | Every orchestrator | Hard hold: never claim, never dispatch, never recon-into-implementation. Operator removes it when the hold lifts |
 | `do-not-rebase` | PRs | Orchestrator or operator | `<auto-rebase-automation>` | Skip auto-rebase for this PR to stop CI-cancellation starvation |
 | `ready-to-dispatch` | Issues | Triage/grooming pass | Orchestrator, at issue selection | Advisory "this issue is groomed and dispatchable" signal. Never authoritative — re-verify before locking |
+| `repo:<name>` | Issues (meta repo only) | Operator or triage | Orchestrator, before any other label is consulted | Identifies the `registry/repos.yaml` entry this issue's work targets — see the registry-dispatch skill. Absent means the issue is about the meta repo itself |
 
 How each maps onto the dispatch mechanics:
 

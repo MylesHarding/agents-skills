@@ -96,7 +96,7 @@ create_label "agent-claimed" "fbca04" \
 create_label "do-not-dispatch" "b60205" \
   "Operator hold — never claim, dispatch, or implement; only the operator removes this"
 create_label "do-not-rebase" "d4c5f9" \
-  "PR opt-out from auto-rebase automation (opt-in; only if the repo runs one) — apply ONLY after a rebase cancels CI, never proactively; remove before merge window"
+  "PR opt-out from auto-rebase (opt-in; apply only after a rebase cancels CI, never proactively)"
 create_label "ready-to-dispatch" "0e8a16" \
   "Advisory: groomed and dispatchable. NOT authoritative — re-verify assignees are empty before locking"
 
