@@ -21,6 +21,7 @@ Project-agnostic; the adopting project defines these in its own CLAUDE.md (the f
 | `<bot-ack-reaction>` | The signal the bot has picked up a PR (e.g. an 👀 reaction); absence = not started yet |
 | `<merge-strategy>` | Allowed strategy flag — and whether a **merge queue** is enabled (omit the flag when it is; see `driving-prs-to-merge`) |
 | `<ai-mention-trigger>` | The human-only AI-action mention string (e.g. `@claude`), if any — never posted from an agent |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — optional, skip silently if unbound |
 
 ## The watcher model
 
@@ -75,6 +76,8 @@ Never post `<ai-mention-trigger>` from any agent — it is a human-only trigger;
 This lane runs in a high-volume, repetitive loop where tokens compound across many ticks and agents. Operate in **caveman mode** (load the `caveman` skill) for all working output. Delegate code edits to sub-agents (or `caveman:cavecrew-investigator`/`-builder` for small scoped changes) so diffs and logs stay out of your context.
 
 Report per tick: `PRs N, open threads M, fixes pushed+resolved K, countered J, auto-merge armed: #x, waiting-on-bot: #y`.
+
+**Dashboard event (optional):** after the per-tick report, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source pr-comments --type tick --message "<the per-tick report line above>"`. Best-effort — ignore any failure.
 
 Caveman compresses *prose only* — never machine-precise content: `gh`/GraphQL commands, label/field names, the arm/disarm gate conditions, `file:line` refs, code blocks all stay byte-exact. Durable prose a human reads — counter-replies and commit messages — is the exception: write those normally, through the `humanizer` skill, not in caveman.
 

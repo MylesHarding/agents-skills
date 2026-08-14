@@ -31,6 +31,7 @@ Every value below is project-specific. The adopting project must define these in
 | Design source of truth (UI projects) | `<design-source>` | the project's authoritative design artifacts (e.g. a checked-in `design-system/` folder or a referenced design tool) |
 | Test-layer menu | `<test-layers>` | unit / integration / smoke / E2E |
 | Bot reviewer(s) | `<bot-reviewer>` | the project's automated PR-review bot, if any |
+| Local dashboard event emitter (optional) | `<dashboard-emit-cmd>` | absolute path to a local fleet-monitoring event command, if this project has one configured; absent in most adopting projects — every use below is best-effort and must be skipped silently when unbound |
 
 The operator login is never a binding: resolve it at session start with `gh api user --jq .login`. Hardcoded logins in dispatch templates are a documented hazard — a stale login can sit in a template for weeks while a different operator runs the sessions.
 
@@ -206,6 +207,8 @@ Require the agent to report back, explicitly:
 
 The return contract gives the orchestrator a clean handle for completion verification (section 7) and for the close-on-merge tick. Without it, agents end with a confident prose summary and the orchestrator has to forensically reconstruct what actually happened.
 
+**Dashboard event (optional):** immediately after issuing the Agent/Task call, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source dispatching-subagents --type dispatch --agent "<name>" --entity-type issue --entity-id "#<N>" --message "<name> dispatched on issue #<N>"`. Best-effort telemetry — ignore any failure and continue normally.
+
 ## 5. Parallel dispatch
 
 If two or more selected issues are file-disjoint AND logically independent, dispatch them in the same message with multiple Agent calls so they run concurrently — serial dispatch of independent work wastes wall-clock time.
@@ -244,6 +247,8 @@ git -C <repo-root> worktree add <worktree-dir>/<name>-v2 \
 
 Include in the new brief: "A prior agent on this issue stalled before pushing and its worktree was cleaned up. Start fresh." The `-v2` suffix avoids collisions with remote ghosts of the dead branch; the note prevents the new agent from being confused by residue. Do not redo the implementation yourself in this case — dispatch a fresh agent so the audit trail stays clean.
 
+**Dashboard event (optional):** when a stall is detected (before deciding salvage vs re-dispatch), if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source dispatching-subagents --type block --agent "<name>" --entity-type issue --entity-id "#<N>" --message "<name> stalled on issue #<N>, auditing worktree"`. Best-effort — ignore any failure.
+
 ## 7. Verify, then trust — completion checks
 
 Agent completion reports are optimistic. Observed failure modes, each with its check:
@@ -256,6 +261,8 @@ Agent completion reports are optimistic. Observed failure modes, each with its c
 - **Wrong branch / primary checkout drift.** Verify the commits are on the expected branch in the expected worktree, not on the integration branch or the primary checkout.
 
 Only after these checks does the PR enter the merge-driving phase — see the **driving-prs-to-merge** skill — and the issue gets closed on merge per the issue-locking skill's release protocol.
+
+**Dashboard event (optional):** once these checks pass, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source dispatching-subagents --type complete --agent "<name>" --entity-type pr --entity-id "pr-<N>" --message "<name> opened PR #<N> for issue #<issue>"`. Best-effort — ignore any failure.
 
 ## 8. Anti-patterns
 

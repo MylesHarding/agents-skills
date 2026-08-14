@@ -29,10 +29,30 @@ This skill is project-agnostic. The adopting project defines these in its own CL
 | `<ai-mention-trigger>` | The human-only AI-action mention string (e.g. `@claude`), if the repo has one |
 | `<force-push-policy>` | Who may force-push feature branches (some environments permission-block sub-agents; orchestrator performs with operator authorization) |
 | `<commit-convention>` | Commit message format; see the dispatching-subagents skill for the canonical definition |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — see the dispatching-subagents skill for the canonical definition. Optional; skip silently if unbound. |
 
 ## The PR-open ritual
 
-Run all three immediately after opening, as one atomic ritual:
+**Gate check before the ritual, not after:** `gh pr merge --auto` on a repo with zero
+required status checks and no required-review-thread-resolution doesn't defer the merge to
+a quality gate — it merges *immediately*, since there's nothing for auto-merge to wait on.
+That's silently indistinguishable from "auto-merge is working" unless you check for it.
+Before arming it:
+
+```bash
+gh api repos/<owner>/<repo>/branches/<integration-branch>/protection \
+  --jq '.required_status_checks.contexts // []' 2>/dev/null || echo "[]"
+```
+
+If that returns an empty list (including a 404, meaning the branch isn't protected at
+all), **do not arm auto-merge silently** — an operator who assumes "auto-merge" implies
+some safety net (a reasonable assumption for anyone who didn't set this repo up
+themselves) would be trusting a gate that doesn't exist. Instead: open the PR without
+`--auto`, and say so plainly in the return contract ("no required checks exist on
+`<integration-branch>` — opened for manual merge, not auto-armed"). Auto-merge is safe to
+enable once at least one required check is real — see `<required-checks>`'s binding.
+
+Once a real gate exists, run all three immediately after opening, as one atomic ritual:
 
 ```bash
 gh pr create --base <integration-branch> --title "<conventional title>" \
