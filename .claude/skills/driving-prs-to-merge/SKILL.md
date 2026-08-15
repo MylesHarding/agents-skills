@@ -144,6 +144,8 @@ Rebasing or "fixing" a flake wastes rebase debt and can introduce conflicts that
 4. **Known infra transients** (e.g. checkout exit-128 "Bad credentials", registry WAF pull blocks misreported as "pull access denied" — not a rate limit, no 429) always clear on rerun; never dispatch a rescue for them. Note: `gh run rerun --failed` is rejected on superseded or in-progress runs with a misleading "workflow file may be broken" error — use a full rerun.
 5. **Stale-failure shadow:** a displayed failure can be from a cancelled/superseded run. If a recent SUCCESS run exists for the same SHA, the failure is stale — nothing to fix.
 
+**Dashboard event (optional):** once a failure is classified as real (not transient, not stale) and actually needs a fix, if `<dashboard-emit-cmd>` is bound, emit `--type block --entity-type pr --entity-id "#<PR#>" --repo <owner>/<repo> --message "PR #<PR#> CI failure classified real: <one-line cause>"`. Skip this for transient retries and stale-shadow cases — only real, fix-requiring failures are worth surfacing.
+
 ### 3. Your own behavior change can break specs legitimately
 
 If your PR changes user-facing behavior (e.g. adds a confirm dialog before delete), an existing E2E spec failing on that flow is a *real contract change*, not a flake: update the spec to walk the new UX **in the same PR**. Related trap: whole-page scans (e.g. axe accessibility) inside unrelated specs can catch UI your PR added elsewhere on the page — scope the scan to the component that spec actually tests (matching the spec's stated intent); don't suppress the rule.
@@ -211,7 +213,7 @@ Burn the minimum resource at each rung: an API call before an orchestrator actio
    git push --force-with-lease origin <branch>
    ```
 
-3. **Dispatched rescue agent** — only for actual code conflicts, on the PR's existing worktree/branch. See the dispatching-subagents skill for the brief template; the brief must name the failing checks, cite the catalog pattern, and include stop-and-report triggers (a failure that looks like a real regression goes to the operator, not a blind "fix" that adjusts the test).
+3. **Dispatched rescue agent** — only for actual code conflicts, on the PR's existing worktree/branch. See the dispatching-subagents skill for the brief template; the brief must name the failing checks, cite the catalog pattern, and include stop-and-report triggers (a failure that looks like a real regression goes to the operator, not a blind "fix" that adjusts the test). **Dashboard event (optional):** if `<dashboard-emit-cmd>` is bound, emit `--type block --entity-type pr --entity-id "#<PR#>" --repo <owner>/<repo> --message "PR #<PR#> escalated to a dispatched rescue agent: <failing checks>"` before dispatching.
 
 After resolving locally, always re-run `<local-gate>` against the merged result before pushing — conflicts resolved without re-running gates ship silent semantic breakage.
 
@@ -280,6 +282,8 @@ For orchestrator-dispatched work, peer review is **selective, cold, and never ap
 ## After merge
 
 If `<integration-branch>` is not the repo's default branch, GitHub will **not** auto-close `Closes #N` issues — the orchestrator must close them explicitly and release the issue lock, or zombie issues get re-dispatched and claim labels go stale. Protocol: see the issue-locking skill. Run the close-on-merge sweep every monitoring tick (see the orchestrating-slots skill).
+
+**Dashboard event (optional):** on detecting a real merge (`gh pr view <PR#> --json mergedAt` is non-null), if `<dashboard-emit-cmd>` is bound, emit `--type merge --entity-type pr --entity-id "#<PR#>" --repo <owner>/<repo> --message "PR #<PR#> merged"`. This is the event that moves a ticket into "done" on a dashboard's kanban/swimlane view — without it, a PR merging is invisible even though everything upstream (claim, dispatch, CI triage) was surfaced.
 
 ## Token discipline: caveman for ops, humanizer for prose
 
