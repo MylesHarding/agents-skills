@@ -105,6 +105,13 @@ A markdown checklist where each item is **independently testable**. The
 implementing agent self-verifies against this list before opening the PR, so
 an untestable criterion ("works well") is a no-op.
 
+For a symptom framed as "shows generic/wrong/missing content" rather than a
+single located defect, grep for every other call site with the same shape
+before finalizing this list — list every location found in section 3, or
+state explicitly why only a subset is in scope. For AC whose correctness
+depends on the shape of real data, check a live sample before finalizing,
+not just the isolated feature code.
+
 ```
 Example:
 - [ ] Click any non-current pill opens the existing confirmation dialog.
