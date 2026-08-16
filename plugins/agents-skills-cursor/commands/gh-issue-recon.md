@@ -11,7 +11,7 @@ Parse them as:
 
 Example: `/gh-issue-recon 412 415 418 model:opus`
 
-The **technical-recon** skill is the protocol — the read-only sandbox, the findings-comment anatomy (implementation approach, verified `file:line`, LoE + confidence, risks/unknowns, dependencies, split recommendation, dispatch recommendation), the verdict states, and the output contract all come from it. This is the deeper dev-side pass, distinct from the cheap intake-triage recon in the gh-issue-filing skill. Consult it before dispatching.
+The **technical-recon** skill is the protocol — the read-only sandbox, the findings-comment anatomy (implementation approach, verified `file:line`, LoE + confidence, risks/unknowns, dependencies, split recommendation, dispatch recommendation), the verdict states, and the output contract all come from it. This is the deeper dev-side pass, distinct from the cheap intake-triage recon in the gh-issue-filing skill. **Note:** Issues carrying the `investigation` label receive a research-plan shaped output instead of an LoE/implementation approach; see the technical-recon skill's "Investigation issues" section for details. Consult the skill before dispatching.
 
 ## Steps
 
