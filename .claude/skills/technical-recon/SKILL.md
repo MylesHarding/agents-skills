@@ -81,7 +81,7 @@ Two channels, in priority order:
    ↩ React to choose: 👍 A · 🎉 B · 🚀 C · 👀 none (then reply). Re-run recon and I'll resume from your answer.
    ```
 
-**Rerun to continue (resume, not restart).** When recon stalls on posted questions, the lead answers them in the issue and reruns the recon command. On rerun, the agent FIRST reads its prior questions and the answers from the issue comments, folds them into its understanding, and — if now ≥90% — proceeds to the full findings and a `vetted`/`blocked` verdict. If gaps remain, it asks only the still-open questions (same two channels). Never re-ask an already-answered question. A `vetted` or `blocked` verdict is only legitimate once the ≥90% bar is met.
+**Rerun to continue (resume, not restart).** When recon stalls on posted questions, the lead answers them in the issue and reruns the recon command. On rerun, the agent FIRST reads its prior questions and the answers from the issue comments — **fetch reactions explicitly via `gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions` for each of your question comments** — folds them into its understanding (a written reply overrides a reaction), and — if now ≥90% — proceeds to the full findings and a `vetted`/`blocked` verdict. If gaps remain, it asks only the still-open questions (same two channels). Never re-ask an already-answered question. A `vetted` or `blocked` verdict is only legitimate once the ≥90% bar is met.
 
 ## What the findings comment must contain
 
