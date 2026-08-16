@@ -21,6 +21,7 @@ Project-agnostic; the adopting project defines these in its own CLAUDE.md.
 |---|---|
 | `<integration-branch>` | The branch the primary checkout is expected to sit on (e.g. `main`) |
 | `<remote>` | The remote to pull from (almost always `origin`) |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — optional, skip silently if unbound |
 
 ## The tick — run exactly this
 
@@ -83,3 +84,5 @@ Caveman compresses prose only — git commands, branch names, SHAs, and the bloc
 ## Stop conditions
 
 Primary up to date, fast-forwarded, or legitimately skipped → report the one-liner and end the tick. The loop re-fires on its interval. A BLOCKED tick does **not** stop the loop — keep reporting it each tick until the operator clears the primary, because a repeating alert is the signal that the work is still stranded there.
+
+**Dashboard event (optional):** after reporting the one-liner, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source fast-forwarding-branches --type <block if BLOCKED, else tick> --message "<the one-liner reported above>"`. Best-effort — ignore any failure.

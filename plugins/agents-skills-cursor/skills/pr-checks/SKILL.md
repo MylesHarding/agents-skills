@@ -23,6 +23,7 @@ Project-agnostic; the adopting project defines these in its own CLAUDE.md (the f
 | `<local-gate>` | The full local verification command CI mirrors (lint + typecheck + tests) |
 | `<merge-strategy>` | Allowed strategy flag — and whether a **merge queue** governs `<integration-branch>` |
 | `<flake-ledger>` | Where known-flaky jobs are tracked; absent → degrade to "retry twice on same SHA" |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — optional, skip silently if unbound |
 
 ## The watcher model
 
@@ -129,6 +130,8 @@ gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){repository(owner:$
 This lane runs in a high-volume, repetitive loop. Operate in **caveman mode** (load the `caveman` skill) for all working output. Delegate diagnosis + edits to sub-agents (or `caveman:cavecrew-investigator` to locate failing code) so noisy logs stay out of your context.
 
 Report per tick: `PRs N, head-red: #x (fix dispatched), conflict: #y, poison-pill: #z (dequeued+drafted), re-armed ejected: #w, queue: healthy/thrashing`.
+
+**Dashboard event (optional):** after the per-tick report, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source pr-checks --type tick --message "<the per-tick report line above>"`. Best-effort — ignore any failure.
 
 Caveman compresses *prose only* — never machine-precise content: every `gh`/`gh api graphql` command, the queue-state names (`UNMERGEABLE`/`AWAITING_CHECKS`/`cancelled`/`failure`), `file:line` refs, code blocks stay byte-exact. Commit messages and PR-body prose: write normally, through the `humanizer` skill.
 

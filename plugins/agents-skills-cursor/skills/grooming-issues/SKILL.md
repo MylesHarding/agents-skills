@@ -30,10 +30,19 @@ If the issue already has acceptance criteria written, **leave them exactly as th
 So:
 
 - **AC already present** → preserve it byte-for-byte. If grooming surfaces that the AC looks wrong, incomplete, or contradicts the lead's stated intent, do **not** edit it — raise it as a question (`**Decision needed: the current AC says X but you described Y — keep / replace / add?**`) and let the lead decide. Only act on AC when the operator's answer authorizes it.
-- **No AC yet** → you may draft acceptance criteria as part of grooming, but each item must be independently testable (issue-filing skill), and present the drafted AC for the lead's confirmation rather than treating it as settled.
+- **No AC yet** → you may draft acceptance criteria as part of grooming, but each item must be independently testable (issue-filing skill), cleared through the sweep below, and presented for the lead's confirmation rather than treated as settled.
 - **Operator says "rewrite the AC"** (or similar explicit instruction this run) → then, and only then, edit it; record `ac=operator-edited` in the contract and note what changed in a comment.
 
 Everything else in the body — title, symptom/context, desired behaviour, out-of-scope, open-questions-now-resolved, traceability hint — grooming may write and improve freely toward the issue-filing anatomy.
+
+## Before finalizing AC: sweep for every instance, check live data
+
+Two symptom shapes recur and need their own check before AC is considered final, not just a description review:
+
+- **"X shows generic/wrong/missing content" — a repeated-defect shape, not a single-location bug.** When the symptom is "shows the wrong thing" rather than "this one line is wrong," AC drafted from only the first instance found systematically misses siblings — the same defect at every other call site with the same shape. Before finalizing, grep the codebase for every other location that emits/reads/renders the same kind of content, and either list every location found (for recon to cover in one pass) or state explicitly in the issue why only a subset is in scope this round.
+- **AC whose correctness depends on the shape of real production data.** A criterion like "matches on X" that was checked only against the feature's own code, never against what live data actually looks like, can pass while doing nothing useful in production. Before finalizing AC that depends on data shape, pull a live sample (a query, a log excerpt, a real record) and confirm the AC's assumption holds against it.
+
+Skip the sweep only when the symptom is provably a single-location defect (one call site, no siblings by construction) — say so explicitly in the issue rather than silently omitting the check.
 
 ## Reach ≥90% that the story reflects the ask
 
@@ -43,6 +52,8 @@ Questions go through the same two channels as the technical-recon skill, in prio
 
 1. **Interactive ask-question tool, if the run has one** — multiple-choice with a recommended option and a write-in escape, looping until ≥90%, then write the body in the same pass.
 2. **No question tool** (the usual fanned-out sub-agent case) — ask via **emoji-answerable comments**: one comment per question, each option tagged with a reaction emoji the lead clicks, a one-line legend at the bottom, kept within the tracker's reaction set (GitHub allows only 👍 👎 😄 🎉 😕 ❤️ 🚀 👀). Use the technical-recon skill's question-comment template verbatim. Then set `<needs-input-state>` and stop.
+
+**"If the run has one" means checking your actual available tools, never assuming.** Confirmed failure mode: an agent running headlessly (spawned non-interactively, e.g. `claude --print`, with no lead attached) reasoned "this chat is the interactive question channel" and asked its questions as plain assistant text — which nobody ever reads, since a headless run's text output is only ever captured into a log, not a two-way conversation. That silently dead-ends the issue: no comment, no `<needs-input-state>`, and the run exits looking successful. Producing narrative text is not evidence an interactive channel exists. Before asking anything, check whether an actual interactive ask-question tool is present in this run's tool list. If it is not — which is always true for a headless/dispatched invocation — channel 1 does not exist for this run, full stop; go straight to channel 2 regardless of what the run "feels" like.
 
 **Rerun to continue (resume, not restart).** When grooming stalls on posted questions, the lead reacts/answers and reruns the groom command. On rerun, read your prior questions and the lead's reactions/replies first, fold them in, and — if now ≥90% — write the groomed body and move to `<groomed-state>`. Never re-ask an answered question; a written reply overrides a reaction.
 

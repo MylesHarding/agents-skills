@@ -8,7 +8,15 @@
 #   worktree_base   Local path the repo should live at (registry's worktree_base
 #                   field — a plain clone, not a git-worktree of this meta repo;
 #                   the target repo has no relationship to the meta repo's own
-#                   history).
+#                   history). May be relative (resolved against this script's
+#                   caller's cwd via `git -C`) or absolute. This script is always
+#                   invoked by the ORCHESTRATOR's own session (Lead, or the
+#                   coordinator) during resolution/worktree-provisioning, before
+#                   any sub-agent is dispatched — never by an already-dispatched
+#                   sub-agent from inside its own worktree. If the adopting
+#                   project's registry entries use a relative worktree_base
+#                   (the common case), their orchestrator's cwd must be that
+#                   project's own meta-repo root when this runs.
 #   github_url      Where to clone from if worktree_base doesn't exist yet.
 #   default_branch  Branch to fetch/rebase onto before branching.
 #   branch_name     Feature branch to create (or reset) off origin/<default_branch>

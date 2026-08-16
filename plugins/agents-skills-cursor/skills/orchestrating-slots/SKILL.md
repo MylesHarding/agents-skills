@@ -28,6 +28,7 @@ Define these in the adopting project's CLAUDE.md before running the loop. Refer 
 | `<paused-label>` | Label/field whose presence on the sentinel pauses all dispatch | `orch:paused` |
 | `<slot-count>` and lane caps | Total concurrency N; leaf/plumbing split | 8 total; 4 leaf + 1 plumbing under cron mode |
 | Cadence tunables | Stall window, backup threshold, lock expiry — calibrate to actual CI runtime | 4h stall, >5 PRs + 15 min no-merge backup, 24h lock expiry (assumes 10–15 min CI) |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — see the dispatching-subagents skill | optional, skip silently if unbound |
 
 For `<claim-label>` and `<hold-label>` semantics (including why they must be machine-readable labels/fields, not comments): see the control-field skill and the issue-locking skill. **Label/field-name matching in jq filters is case-sensitive; the exact casing bootstrapped by the control-field skill's script is the only casing your queries may assume.**
 
@@ -67,6 +68,8 @@ gh pr list --search "Closes #<N>" --state open
    **Meta-repo variant**: if this repo holds a `registry/repos.yaml`, candidates may carry a `repo:<name>` label pointing at a different repo entirely — resolve and provision it per the **registry-dispatch** skill before locking, and treat an unresolvable name as excluded, same as `blocked`.
 4. **Fill slots P0 → P1 → P2**, ascending `createdAt` within tier. Bundle same-surface issues (same page, same module) into a single dispatch — one agent, one worktree, one PR — instead of three agents racing on one file. Lock each issue per the issue-locking skill *before* dispatching; brief per the dispatching-subagents skill.
 5. **Reserve headroom**: keep ~25% of slots (2 of 8) free for inbound events. A fully-saturated orchestrator cannot rescue, sweep, or react, and events always come.
+
+**Dashboard event (optional):** once slots are filled for this round, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source orchestrating-slots --type tick --message "<N> issues queued, <M>/<slot-count> slots filled"`. Best-effort — ignore any failure.
 
 ## The event loop (core)
 
