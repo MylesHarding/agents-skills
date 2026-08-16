@@ -207,7 +207,7 @@ Require the agent to report back, explicitly:
 
 The return contract gives the orchestrator a clean handle for completion verification (section 7) and for the close-on-merge tick. Without it, agents end with a confident prose summary and the orchestrator has to forensically reconstruct what actually happened.
 
-**Dashboard event (optional):** immediately after issuing the Agent/Task call, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source dispatching-subagents --type dispatch --agent "<name>" --entity-type issue --entity-id "#<N>" --repo <owner>/<repo> --message "<name> dispatched on issue #<N>"`. Best-effort telemetry — ignore any failure and continue normally.
+**Dashboard event (optional):** after the Agent/Task call, the dispatched agent should emit an event with the real title: once it has read the issue, fetch the title via `gh issue view <N> --json title --jq .title` and run `node <dashboard-emit-cmd> --source dispatching-subagents --type dispatch --agent "<name>" --entity-type issue --entity-id "#<N>" --repo <owner>/<repo> --external-id "issue-<N>-dispatch" --payload '{"title":"<title>"}' --message "<name> dispatched on issue #<N>"`. If the title fetch fails, emit without `--payload` instead of blocking the dispatch. Best-effort telemetry — ignore any failure and continue normally.
 
 ## 5. Parallel dispatch
 
@@ -247,7 +247,7 @@ git -C <repo-root> worktree add <worktree-dir>/<name>-v2 \
 
 Include in the new brief: "A prior agent on this issue stalled before pushing and its worktree was cleaned up. Start fresh." The `-v2` suffix avoids collisions with remote ghosts of the dead branch; the note prevents the new agent from being confused by residue. Do not redo the implementation yourself in this case — dispatch a fresh agent so the audit trail stays clean.
 
-**Dashboard event (optional):** when a stall is detected (before deciding salvage vs re-dispatch), if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source dispatching-subagents --type block --agent "<name>" --entity-type issue --entity-id "#<N>" --repo <owner>/<repo> --message "<name> stalled on issue #<N>, auditing worktree"`. Best-effort — ignore any failure.
+**Dashboard event (optional):** when a stall is detected (before deciding salvage vs re-dispatch), if `<dashboard-emit-cmd>` is bound, fetch the title via `gh issue view <N> --json title --jq .title` and run `node <dashboard-emit-cmd> --source dispatching-subagents --type block --agent "<name>" --entity-type issue --entity-id "#<N>" --repo <owner>/<repo> --external-id "issue-<N>-block" --payload '{"title":"<title>"}' --message "<name> stalled on issue #<N>, auditing worktree"`. If the title fetch fails, emit without `--payload` instead of blocking. Best-effort — ignore any failure.
 
 ## 7. Verify, then trust — completion checks
 
@@ -262,7 +262,7 @@ Agent completion reports are optimistic. Observed failure modes, each with its c
 
 Only after these checks does the PR enter the merge-driving phase — see the **driving-prs-to-merge** skill — and the issue gets closed on merge per the issue-locking skill's release protocol.
 
-**Dashboard event (optional):** once these checks pass, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source dispatching-subagents --type complete --agent "<name>" --entity-type pr --entity-id "#<N>" --repo <owner>/<repo> --message "<name> opened PR #<N> for issue #<issue>"`. Best-effort — ignore any failure. Entity-id uses the same `#<N>` format for both issues and PRs — `entity-type` disambiguates — so a dashboard consumer can key on one convention regardless of entity kind.
+**Dashboard event (optional):** once these checks pass, if `<dashboard-emit-cmd>` is bound, fetch the PR title via `gh pr view <N> --json title --jq .title` and run `node <dashboard-emit-cmd> --source dispatching-subagents --type complete --agent "<name>" --entity-type pr --entity-id "#<N>" --repo <owner>/<repo> --external-id "pr-<N>-complete" --payload '{"title":"<title>"}' --message "<name> opened PR #<N> for issue #<issue>"`. If the title fetch fails, emit without `--payload` instead of blocking. Best-effort — ignore any failure. Entity-id uses the same `#<N>` format for both issues and PRs — `entity-type` disambiguates — so a dashboard consumer can key on one convention regardless of entity kind.
 
 ## 8. Anti-patterns
 
