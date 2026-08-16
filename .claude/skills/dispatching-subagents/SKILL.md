@@ -95,6 +95,8 @@ cd <worktree-dir>/<descriptive-name>
 
 Never the primary checkout, never branched from whatever happens to be checked out. Agents that work in the primary checkout collide with the orchestrator and with each other; agents that branch from a stale or wrong base ship diffs full of unrelated changes. The branch name encodes the issue number so PRs, locks, and worktrees are mutually traceable.
 
+**Symlink caveat (forks/* are primary-checkout-only):** before writing a brief, check whether any in-scope path is a symlink pointing into `forks/` by running `git ls-tree HEAD -- <path>` and looking for mode `120000`. If found, the target is present only in the primary checkout (since `forks/*` is gitignored in most adopting projects and never checked out inside worktrees). Instruct the agent to edit the real file under `forks/<name>/` directly in that checkout — never let it replace the symlink with a real file in the worktree, which silently breaks the fork bridge. See `docs/vendor-forks.md` for the full context on fork bridges.
+
 ### (c) Toolchain prefix — hooks need the right runtime
 
 If `<toolchain-prefix>` is non-empty, include the exact shell prefix that makes the project's git hooks runnable in a fresh non-interactive shell, and the rule that goes with it:
