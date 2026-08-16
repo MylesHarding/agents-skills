@@ -189,7 +189,23 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
    gh pr view <PR#> --json assignees,labels
    Repair via the REST API if anything is missing — never via `gh pr edit`
    (can exit 0 yet persist nothing).
-6. Enable auto-merge immediately: <auto-merge-cmd>
+6. Enable auto-merge immediately, UNLESS the PR qualifies for Design+QA review:
+   **Carve-out:** If the PR's changed files include anything under
+   `tools/dashboard/public/`, do NOT arm auto-merge yet. The orchestrator's
+   Design+QA review gate must run first (worker-loop step 8), and the gate
+   itself will arm auto-merge only after both reviewers pass. This prevents
+   auto-merge from firing before fresh-context reviewers can render and judge
+   the UI.
+   ```bash
+   # Check if this PR requires the design-qa gate
+   if gh pr view <N> --json files --jq '[.files[].path] | any(startswith("tools/dashboard/public/"))' | grep -q true; then
+     # Skip auto-merge; gate will arm it after PASS verdict
+     echo "PR qualifies for design-qa gate review; auto-merge will be armed post-review"
+   else
+     # Safe to arm now
+     <auto-merge-cmd>
+   fi
+   ```
 7. Drive the PR to green per the driving-prs-to-merge skill: respond to
    every review thread including <bot-reviewer>'s, fix CI, stay rebased.
 ```
