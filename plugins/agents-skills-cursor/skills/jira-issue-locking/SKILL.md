@@ -99,12 +99,12 @@ addCommentToJiraIssue(PROJ-123, body):
   **Agent session lock** — claimed by an automated session; do not assign to another agent.
 
   - operator: `<accountId>`
-  - worktree: `<absolute-path-to-worktree>`
+  - worktree: `<repo-relative-worktree-path>`
   - branch: `<branch-name>`
   - claimed at: `<ISO-8601 UTC timestamp>`
 
   ```
-  claude-lock: operator=<accountId> worktree=<absolute-path> branch=<branch> at=<ISO-8601 UTC>
+  claude-lock: operator=<accountId> worktree=<repo-relative-path> branch=<branch> at=<ISO-8601 UTC>
   ```
 
   This lock auto-expires after <stale-window> of no PR activity. If you can confirm the session
@@ -117,13 +117,14 @@ The canonical marker line uses the placeholder (with the default binding this re
 claude-lock: operator=<accountId> worktree=<path> branch=<branch> at=<ISO-8601 UTC>
 ```
 
-This exact shape is the search target — `comment ~ "claude-lock"` finds it, and the line is then parsed field-by-field. `<path>` is the `<worktree-dir>` value bound per the dispatching-subagents skill.
+This exact shape is the search target — `comment ~ "claude-lock"` finds it, and the line is then parsed field-by-field. `<path>` is the `<worktree-dir>` value bound per the dispatching-subagents skill, made **relative to the repo root** before it's written into the comment (e.g. `.worktrees/<name>`, not the absolute filesystem path `git worktree add` actually used on disk) — confirmed live: an absolute path leaks the local machine's home-directory structure (and therefore the operator's OS account name) into a comment on a tracker most orgs treat as at least semi-public. The worktree still needs the real absolute path to actually operate on it; only the *posted* value gets the repo-relative treatment.
 
-Three pitfalls that have each produced broken locks in practice:
+Four pitfalls that have each produced broken locks — or leaked local machine details — in practice:
 
 - **Put the marker on its own line in a code/plain block** so Jira's renderer does not reflow or linkify it — a marker wrapped into a paragraph or auto-linked is harder to parse, and stale-detection that reads it field-by-field can misattribute it.
 - **Resolve the assignee to an `accountId`, not a name or email.** A comment or assignment carrying a display name or email instead of the `accountId` cannot be matched back to the operator by `assignee = currentUser()` or by marker parsing.
-- **Substitute real values; do not post placeholders.** Agents copying the template verbatim have posted comments containing literal `<absolute-path-to-worktree>`, which breaks marker parsing and tells other operators nothing.
+- **Substitute real values; do not post placeholders.** Agents copying the template verbatim have posted comments containing literal `<repo-relative-worktree-path>`, which breaks marker parsing and tells other operators nothing.
+- **Never post the absolute worktree path.** Strip everything up to and including the repo root before writing the `worktree:` field or the marker line — `git rev-parse --show-toplevel` gives the prefix to strip.
 
 The lock comment is deliberately self-documenting: the expiry policy and exact reclaim mechanics are embedded in the lock itself, so a future agent or human who finds it needs no procedure file to act correctly.
 

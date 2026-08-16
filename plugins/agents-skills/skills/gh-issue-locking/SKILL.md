@@ -25,6 +25,7 @@ These values are project policy, not protocol. The adopting project defines them
 | `<chat-channel>` | Team real-time channel for urgent pings | Slack |
 | `<bot-trigger>` | The project's human-only AI-mention trigger | `@claude` |
 | Operator logins | Informational roster of known operators | resolve dynamically — see below |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured | see the dispatching-subagents skill — optional, skip silently if unbound |
 
 `<claim-label>` and `<lock-marker>` defaults carry no project semantics and can be adopted verbatim. The `<claim-label>` label itself is created by the gh-issue-labels bootstrap script — do not create it inline. If you rename either binding, rename it in every grep and snippet below — a marker that drifts from the greps makes every lock invisible to stale-detection.
 
@@ -85,16 +86,18 @@ gh issue comment <N> --body "$(cat <<EOF
 **Agent session lock** — claimed by an automated session; do not assign to another agent.
 
 - operator: \`$OPERATOR\`
-- worktree: \`<absolute-path-to-worktree>\`
+- worktree: \`<repo-relative-worktree-path>\`
 - branch: \`<branch-name>\`
 - claimed at: \`<ISO-8601 UTC timestamp>\`
 
-<!-- <lock-marker> operator=$OPERATOR worktree=<absolute-path> branch=<branch> at=<ISO-8601 UTC> -->
+<!-- <lock-marker> operator=$OPERATOR worktree=<repo-relative-path> branch=<branch> at=<ISO-8601 UTC> -->
 
 This lock auto-expires after <stale-window> of no PR activity. If you can confirm the session has ended, reclaim by removing the \`<claim-label>\` label AND the \`$OPERATOR\` assignee, then start work.
 EOF
 )"
 ```
+
+**Dashboard event (optional):** immediately after the lock lands, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type claim --agent "$OPERATOR" --entity-type issue --entity-id "#<N>" --message "$OPERATOR claimed issue #<N>"`. Best-effort — ignore any failure.
 
 The canonical marker line uses the placeholder (with the default binding this renders as `<!-- claude-lock: ... -->`):
 
@@ -102,13 +105,14 @@ The canonical marker line uses the placeholder (with the default binding this re
 <!-- <lock-marker> operator=<login> worktree=<path> branch=<branch> at=<ISO-8601 UTC> -->
 ```
 
-This exact shape is the grep target. `<path>` is the `<worktree-dir>` value bound per the dispatching-subagents skill.
+This exact shape is the grep target. `<path>` is the `<worktree-dir>` value bound per the dispatching-subagents skill, made **relative to the repo root** before it's written into the comment (e.g. `.worktrees/<name>`, not the absolute filesystem path `git worktree add` actually used on disk) — confirmed live: an absolute path leaks the local machine's home-directory structure (and therefore the operator's OS account name) into a public GitHub issue comment. The worktree still needs the real absolute path to actually operate on it; only the *posted* value gets the repo-relative treatment.
 
-Three pitfalls that have each produced broken locks in practice:
+Four pitfalls that have each produced broken locks — or leaked local machine details — in practice:
 
 - **Leave the heredoc delimiter unquoted** (`<<EOF`, not `<<'EOF'`) so `$OPERATOR` interpolates — a quoted heredoc posts a lock with a literal `$OPERATOR` and stale-detection cannot attribute it.
 - **Escape backticks** (`` \` ``) inside the heredoc so they pass through as literal markdown instead of being executed as shell command substitution.
-- **Substitute real values; do not post placeholders.** Agents copying the template verbatim have posted comments containing literal `<absolute-path-to-worktree>`, which breaks marker parsing and tells other operators nothing.
+- **Substitute real values; do not post placeholders.** Agents copying the template verbatim have posted comments containing literal `<repo-relative-worktree-path>`, which breaks marker parsing and tells other operators nothing.
+- **Never post the absolute worktree path.** Strip everything up to and including the repo root before writing the `worktree:` field or the marker comment — `git rev-parse --show-toplevel` gives the prefix to strip.
 
 The lock comment is deliberately self-documenting: the expiry policy and exact reclaim mechanics are embedded in the lock itself, so a future agent or human who finds it needs no procedure file to act correctly.
 
@@ -182,6 +186,8 @@ gh issue close <N> --reason completed --comment "Resolved by PR #<PR-number> (me
 gh issue comment <N> --body "Session lock released — PR #<PR-number> merged."
 ```
 
+**Dashboard event (optional):** after step 3, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type merge --entity-type issue --entity-id "#<N>" --message "issue #<N> resolved by PR #<PR-number>"`. Best-effort — ignore any failure.
+
 Retaining the assignee on a completed issue is intentional: it is the at-a-glance record of who landed it. If your project merges straight to the default branch, the explicit close is unnecessary (auto-close fires) but steps 1 and 3 still apply.
 
 ### PR closed WITHOUT merging — full release back to the queue
@@ -191,6 +197,8 @@ OPERATOR=$(gh api user --jq .login)
 gh issue edit <N> --remove-label "<claim-label>" --remove-assignee "$OPERATOR"
 gh issue comment <N> --body "Session lock released — PR #<PR-number> closed without merging; issue remains open."
 ```
+
+**Dashboard event (optional):** after this release, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type release --entity-type issue --entity-id "#<N>" --message "issue #<N> released back to queue, PR #<PR-number> closed without merging"`. Best-effort — ignore any failure.
 
 Here the assignee must go too: if it lingers after a failed attempt, the issue looks claimed in every operator's `--assignee` scan and nobody picks it up next round. One field encodes both meanings — kept = credit, stripped = available.
 
