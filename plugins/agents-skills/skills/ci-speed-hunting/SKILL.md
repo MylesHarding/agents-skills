@@ -21,6 +21,7 @@ Project-agnostic; the adopting project defines these (the full set lives in `dri
 | `<summary-check>` | The rollup check whose completion the critical path ends at |
 | `<e2e-suite>` | The end-to-end / browser test job or matrix (often the long pole) |
 | `<merge-strategy>` | Allowed strategy flag — and whether a **merge queue** governs the branch |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — optional, skip silently if unbound |
 
 ## The one rule
 
@@ -94,6 +95,8 @@ gh run list --repo $REPO --event merge_group --status success --limit 10 \
 ```
 
 Build a ranked list: `{job-or-chain, wall-clock, % of critical path, bottleneck class}`, worst-first. **Don't trust `timeout-minutes`** — that's the ceiling, not the runtime. Always measure. Re-derive your baseline from live data each tick; the suite grows, so last week's long pole may not be this week's.
+
+**Dashboard event (optional):** after mining, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source ci-speed-hunting --type tick --message "mined critical path, long pole: <job-or-chain> at <%> of wall-clock"`. Best-effort — ignore any failure.
 
 ## Step 2 — DIAGNOSE the bottleneck class
 

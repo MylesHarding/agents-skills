@@ -25,6 +25,7 @@ These values are project policy, not protocol. The adopting project defines them
 | `<chat-channel>` | Team real-time channel for urgent pings | Slack |
 | `<bot-trigger>` | The project's human-only AI-mention trigger | `@claude` |
 | Operator logins | Informational roster of known operators | resolve dynamically — see below |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured | see the dispatching-subagents skill — optional, skip silently if unbound |
 
 `<claim-label>` and `<lock-marker>` defaults carry no project semantics and can be adopted verbatim. The `<claim-label>` label itself is created by the gh-issue-labels bootstrap script — do not create it inline. If you rename either binding, rename it in every grep and snippet below — a marker that drifts from the greps makes every lock invisible to stale-detection.
 
@@ -95,6 +96,8 @@ This lock auto-expires after <stale-window> of no PR activity. If you can confir
 EOF
 )"
 ```
+
+**Dashboard event (optional):** immediately after the lock lands, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type claim --agent "$OPERATOR" --entity-type issue --entity-id "#<N>" --message "$OPERATOR claimed issue #<N>"`. Best-effort — ignore any failure.
 
 The canonical marker line uses the placeholder (with the default binding this renders as `<!-- claude-lock: ... -->`):
 
@@ -182,6 +185,8 @@ gh issue close <N> --reason completed --comment "Resolved by PR #<PR-number> (me
 gh issue comment <N> --body "Session lock released — PR #<PR-number> merged."
 ```
 
+**Dashboard event (optional):** after step 3, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type merge --entity-type issue --entity-id "#<N>" --message "issue #<N> resolved by PR #<PR-number>"`. Best-effort — ignore any failure.
+
 Retaining the assignee on a completed issue is intentional: it is the at-a-glance record of who landed it. If your project merges straight to the default branch, the explicit close is unnecessary (auto-close fires) but steps 1 and 3 still apply.
 
 ### PR closed WITHOUT merging — full release back to the queue
@@ -191,6 +196,8 @@ OPERATOR=$(gh api user --jq .login)
 gh issue edit <N> --remove-label "<claim-label>" --remove-assignee "$OPERATOR"
 gh issue comment <N> --body "Session lock released — PR #<PR-number> closed without merging; issue remains open."
 ```
+
+**Dashboard event (optional):** after this release, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type release --entity-type issue --entity-id "#<N>" --message "issue #<N> released back to queue, PR #<PR-number> closed without merging"`. Best-effort — ignore any failure.
 
 Here the assignee must go too: if it lingers after a failed attempt, the issue looks claimed in every operator's `--assignee` scan and nobody picks it up next round. One field encodes both meanings — kept = credit, stripped = available.
 

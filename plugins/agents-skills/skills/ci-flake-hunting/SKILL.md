@@ -43,6 +43,7 @@ Project-agnostic; the adopting project defines these (the full set lives in `dri
 | `<e2e-runner>` | The E2E runner and its repeat/stress flags (e.g. Playwright `--repeat-each`, Cypress `--repeat`) |
 | `<prod-build-recipe>` | How CI builds the app for E2E (production build + the E2E env), reproduced locally |
 | `<merge-strategy>` | Allowed strategy flag — and whether a **merge queue** governs the branch |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — optional, skip silently if unbound |
 
 ## The one rule
 
@@ -104,6 +105,8 @@ gh api "repos/$REPO/check-runs/<checkRunId>/annotations" -q '.[] | "\(.path):\(.
 ```
 
 Build a ranked list: `{spec, test, shard, frequency, last-seen}`, worst-first.
+
+**Dashboard event (optional):** after mining, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source ci-flake-hunting --type tick --message "mined N failing runs, M ranked flake candidates, worst: <spec>"`. Best-effort — ignore any failure.
 
 ## Step 2 — REPRODUCE harsher than CI
 
