@@ -99,6 +99,8 @@ create_label "do-not-rebase" "d4c5f9" \
   "PR opt-out from auto-rebase (opt-in; apply only after a rebase cancels CI, never proactively)"
 create_label "ready-to-dispatch" "0e8a16" \
   "Advisory: groomed and dispatchable. NOT authoritative — re-verify assignees are empty before locking"
+create_label "investigation" "a371f7" \
+  "This issue is an investigation/research task; recon produces research plan instead of LoE"
 
 echo
 echo "Done. Taxonomy bootstrapped with models: ${MODELS[*]} (workhorse: ${WORKHORSE})."

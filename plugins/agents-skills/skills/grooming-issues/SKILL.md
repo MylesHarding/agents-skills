@@ -57,7 +57,7 @@ Questions go through the same two channels as the technical-recon skill, in prio
 
 **HARD RULE: Ending your turn with clarifying questions expressed only in your own final assistant-message text — without having actually invoked either the interactive ask-question tool (channel 1) or `gh issue comment` (channel 2) — is itself a sandbox-contract violation, not a valid third option.** There is no "just tell them in my response" path. If you are below the 90% confidence threshold, your turn is not done until you have either called the ask-question tool, or made an actual `gh issue comment` call plus set `<needs-input-state>`. Printing the questions and stopping is exactly the bug this fix exists to prevent.
 
-**Rerun to continue (resume, not restart).** When grooming stalls on posted questions, the lead reacts/answers and reruns the groom command. On rerun, read your prior questions and the lead's reactions/replies first, fold them in, and — if now ≥90% — write the groomed body and move to `<groomed-state>`. Never re-ask an answered question; a written reply overrides a reaction.
+**Rerun to continue (resume, not restart).** When grooming stalls on posted questions, the lead reacts/answers and reruns the groom command. On rerun, read your prior questions and the lead's reactions/replies first — **fetch reactions explicitly via `gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions` for each of your question comments** — fold them in (a written reply overrides a reaction), and — if now ≥90% — write the groomed body and move to `<groomed-state>`. Never re-ask an answered question.
 
 ## The sandbox
 
