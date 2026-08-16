@@ -55,6 +55,8 @@ Questions go through the same two channels as the technical-recon skill, in prio
 
 **"If the run has one" means checking your actual available tools, never assuming.** Confirmed failure mode: an agent running headlessly (spawned non-interactively, e.g. `claude --print`, with no lead attached) reasoned "this chat is the interactive question channel" and asked its questions as plain assistant text — which nobody ever reads, since a headless run's text output is only ever captured into a log, not a two-way conversation. That silently dead-ends the issue: no comment, no `<needs-input-state>`, and the run exits looking successful. Producing narrative text is not evidence an interactive channel exists. Before asking anything, check whether an actual interactive ask-question tool is present in this run's tool list. If it is not — which is always true for a headless/dispatched invocation — channel 1 does not exist for this run, full stop; go straight to channel 2 regardless of what the run "feels" like.
 
+**HARD RULE: Ending your turn with clarifying questions expressed only in your own final assistant-message text — without having actually invoked either the interactive ask-question tool (channel 1) or `gh issue comment` (channel 2) — is itself a sandbox-contract violation, not a valid third option.** There is no "just tell them in my response" path. If you are below the 90% confidence threshold, your turn is not done until you have either called the ask-question tool, or made an actual `gh issue comment` call plus set `<needs-input-state>`. Printing the questions and stopping is exactly the bug this fix exists to prevent.
+
 **Rerun to continue (resume, not restart).** When grooming stalls on posted questions, the lead reacts/answers and reruns the groom command. On rerun, read your prior questions and the lead's reactions/replies first, fold them in, and — if now ≥90% — write the groomed body and move to `<groomed-state>`. Never re-ask an answered question; a written reply overrides a reaction.
 
 ## The sandbox
@@ -67,6 +69,7 @@ Forbidden — stop and emit `GROOM-ERROR: <what was attempted>`:
 - Assert a technical approach or a level-of-effort — that is the technical-recon skill; grooming that pre-judges the build biases the estimate.
 - Claim/assign the issue, write code, or open a PR.
 - Mark the issue ready-to-dispatch — grooming earns `<groomed-state>`, not dispatch-readiness; technical-recon earns that.
+- End your turn with clarifying questions expressed only as plain assistant-message text, without having called either the interactive ask-question tool or `gh issue comment` — this is the sandbox-contract violation that the text-only-questions bug exists to prevent. Below 90% confidence, you must invoke one of the two channels or you have not actually asked the question.
 
 ## Verdict and handoff
 
