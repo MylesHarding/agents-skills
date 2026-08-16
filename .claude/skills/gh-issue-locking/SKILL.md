@@ -86,11 +86,11 @@ gh issue comment <N> --body "$(cat <<EOF
 **Agent session lock** — claimed by an automated session; do not assign to another agent.
 
 - operator: \`$OPERATOR\`
-- worktree: \`<absolute-path-to-worktree>\`
+- worktree: \`<repo-relative-worktree-path>\`
 - branch: \`<branch-name>\`
 - claimed at: \`<ISO-8601 UTC timestamp>\`
 
-<!-- <lock-marker> operator=$OPERATOR worktree=<absolute-path> branch=<branch> at=<ISO-8601 UTC> -->
+<!-- <lock-marker> operator=$OPERATOR worktree=<repo-relative-path> branch=<branch> at=<ISO-8601 UTC> -->
 
 This lock auto-expires after <stale-window> of no PR activity. If you can confirm the session has ended, reclaim by removing the \`<claim-label>\` label AND the \`$OPERATOR\` assignee, then start work.
 EOF
@@ -105,13 +105,14 @@ The canonical marker line uses the placeholder (with the default binding this re
 <!-- <lock-marker> operator=<login> worktree=<path> branch=<branch> at=<ISO-8601 UTC> -->
 ```
 
-This exact shape is the grep target. `<path>` is the `<worktree-dir>` value bound per the dispatching-subagents skill.
+This exact shape is the grep target. `<path>` is the `<worktree-dir>` value bound per the dispatching-subagents skill, made **relative to the repo root** before it's written into the comment (e.g. `.worktrees/<name>`, not the absolute filesystem path `git worktree add` actually used on disk) — confirmed live: an absolute path leaks the local machine's home-directory structure (and therefore the operator's OS account name) into a public GitHub issue comment. The worktree still needs the real absolute path to actually operate on it; only the *posted* value gets the repo-relative treatment.
 
-Three pitfalls that have each produced broken locks in practice:
+Four pitfalls that have each produced broken locks — or leaked local machine details — in practice:
 
 - **Leave the heredoc delimiter unquoted** (`<<EOF`, not `<<'EOF'`) so `$OPERATOR` interpolates — a quoted heredoc posts a lock with a literal `$OPERATOR` and stale-detection cannot attribute it.
 - **Escape backticks** (`` \` ``) inside the heredoc so they pass through as literal markdown instead of being executed as shell command substitution.
-- **Substitute real values; do not post placeholders.** Agents copying the template verbatim have posted comments containing literal `<absolute-path-to-worktree>`, which breaks marker parsing and tells other operators nothing.
+- **Substitute real values; do not post placeholders.** Agents copying the template verbatim have posted comments containing literal `<repo-relative-worktree-path>`, which breaks marker parsing and tells other operators nothing.
+- **Never post the absolute worktree path.** Strip everything up to and including the repo root before writing the `worktree:` field or the marker comment — `git rev-parse --show-toplevel` gives the prefix to strip.
 
 The lock comment is deliberately self-documenting: the expiry policy and exact reclaim mechanics are embedded in the lock itself, so a future agent or human who finds it needs no procedure file to act correctly.
 
