@@ -21,6 +21,7 @@ Project-agnostic; the adopting project defines these in its own CLAUDE.md. Used 
 | `<worktree-dir>` | Where feature branches live on disk (see `dispatching-subagents`) |
 | `<claim-lock>` | The active-claim marker — a label (`agent-claimed`) + assignee on GitHub, the equivalent field on Jira (see the issue-locking skill) |
 | `<tracker-key>` | Linked tracker reference convention (a GitHub `#N`, a Jira issue key) |
+| `<dashboard-emit-cmd>` | Local fleet-monitoring event emitter, if configured — see `dispatching-subagents` — optional, skip silently if unbound |
 
 ## The watcher model
 
@@ -53,6 +54,8 @@ GitHub auto-closes an issue from `Closes #N` **only when the PR merges into `<de
 This lane runs in a repetitive loop. Operate in **caveman mode** (load the `caveman` skill) for working output. Delegate noisy scans (branch lists, worktree audits) to the cheap tier and parse a fixed command's output rather than reading it whole.
 
 Report per tick: `closed N (merged M / abandoned A), issues closed: #x, locks released: #y, branches/worktrees removed: K`.
+
+**Dashboard event (optional):** after the per-tick report, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source pr-cleanup --type tick --message "<the per-tick report line above>"`. Best-effort — ignore any failure.
 
 Caveman compresses *prose only* — never machine-precise content: `gh`/`git`/tracker commands, label and field names, the `<claim-lock>` markers, `<tracker-key>` references stay byte-exact. The closing comment a human reads is the exception: write it normally, through the `humanizer` skill.
 
