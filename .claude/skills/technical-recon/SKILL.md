@@ -97,6 +97,18 @@ The deliverable is a single comment, written so the lead can accept the estimate
 
 Write sections 1, 4, and 6 as natural prose a human reviews — run them through the humanizer skill (see Token discipline). Keep `file:line`, the size token, and the contract line exact.
 
+## Investigation issues — research-plan output (for `investigation` labeled issues)
+
+When an issue carries the `investigation` label, technical-recon produces a **research plan** instead of an implementation approach and LoE. Investigation issues are top-of-funnel research asks ("go understand X") rather than build asks ("build X"). The research plan guides the human who will conduct the investigation and forms the findings when they post the research conclusion. Sections:
+
+1. **Questions to answer** — the concrete research questions the investigation must resolve (not open-ended; grounded in what the lead flagged as unclear).
+2. **Investigation approach** — scope (which areas of the codebase, which docs, which external systems), methods (how to examine them — code review, API profiling, load testing, vendor docs, etc.), and data sources to consult.
+3. **Rough time-box** — estimated effort as a research time estimate, not an LoE estimate (e.g., "2–4 hours for a code/docs review and API profiling", not "S"). This guides the human's planning, not a dispatch estimate.
+4. **Risks, unknowns, investigation-specific** — what could block the research: missing access, undocumented APIs, vendor latency, or systems that only exhibit behavior under load.
+5. **Findings placeholder** — a sketch of what the research findings should include when the human posts the conclusion (e.g., "findings should address whether the vendor API guarantees atomicity and whether our current retry loop is adequate, plus any edge cases discovered").
+
+Write all sections as natural prose — not a template, but a narrative plan the human can follow. Keep the questions and data sources explicit and concrete. When the investigation concludes, a human posts the findings (not a recon agent) to close the issue — findings are not auto-computed, they are the research result itself.
+
 ## Verdict — where the issue lands
 
 Recon ends by moving the issue to exactly one state via the control-field skill:
