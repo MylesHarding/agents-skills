@@ -308,14 +308,24 @@ effort is spent; lane must be known *before* the lane-contention check; and
 Priority is computed only for issues that will actually dispatch.
 Stop-at-first-match keeps the task inside a cheap model's reliability envelope.
 
-1. **SPEC-CLARITY → needs-spec-input** if: hedge words ("appropriate",
-   "reasonable", "intuitive", "complex", "robust") without measurable detail —
-   these read as requirements but are undecided design, and dispatching them
-   produces guess-driven implementations; OR an undecided reference (e.g.
-   "configure webhook" without destination/format/auth); OR a deferred-tier
-   subsystem with no decision logged in `<decision-records>`; OR a recorded
-   code/spec deviation with no resolution; OR a UI requirement with no anchor
-   in `<design-source>`.
+1. **SPEC-CLARITY → try to resolve first, needs-spec-input only if you can't.**
+   A hedge word ("appropriate", "reasonable", "intuitive", "complex", "robust")
+   or an undecided reference (e.g. "configure webhook" without a named
+   destination/format/auth) is a trigger to *look for a resolving precedent*,
+   not an automatic stall — this is a cheap-model mechanical check, not a
+   judgment call: `git grep` for the same setting/reference already decided
+   elsewhere in the codebase, or check the most recently Done issue touching
+   the same area. Found one → adopt that value, note it as
+   `**Assumption: <value>, matching <file:line or PROJ-123>**` in a comment on
+   the issue, and continue down the tree as if CLEAR. Found nothing → stall as
+   needs-spec-input, since a cheap model guessing with no precedent to check
+   against is exactly the guess-driven-implementation failure this rule exists
+   to prevent. Always stall regardless of precedent search for: a deferred-tier
+   subsystem with no decision logged in `<decision-records>`; a recorded
+   code/spec deviation with no resolution; or a UI requirement with no anchor
+   in `<design-source>` — these three are irreversible-enough or
+   architecturally-loaded enough that even a found precedent isn't sufficient,
+   only an explicit decision record is.
 2. **LANE** → plumbing if likely-touched files include any `<shared-surfaces>`
    (purely additive changes, e.g. a new enum value, count as leaf). Use two
    evidence sources: the issue's Affected-code/Files metadata AND `git grep`
