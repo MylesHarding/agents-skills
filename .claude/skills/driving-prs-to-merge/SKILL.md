@@ -288,6 +288,16 @@ For orchestrator-dispatched work, peer review is **selective, cold, and never ap
 - **Hands-off:** reviewers never modify the PR assignee (it is the multi-operator ownership signal) and never post `<ai-mention-trigger>`.
 - Route reviewer specialization by change shape (app code → general reviewer; tests → QA profile; auth/secrets/isolation → security profile; infra/pipelines → ops profile; DDL/migrations → data profile); a PR spanning shapes gets parallel reviewers. Dispatch mechanics and model policy: see the dispatching-subagents skill.
 
+## PR body edits: closing keywords are sticky
+
+**Critical:** Editing a closing keyword (`Closes #N`, `Fixes #N`, `Resolves #N`) out of a PR body after `gh pr create` does NOT remove the GitHub link. GitHub establishes the `closedByPullRequestsReferences` link the first time it parses a closing keyword from *any* revision of the PR body, and that link persists even after subsequent body edits remove the keyword. Editing the body text only changes what humans reading the body see — it does NOT call any unlink mutation.
+
+**Evidence:** issue #417 / PR #530 (2026-08-18). PR #530 was briefed with `Closes #417` in the initial `gh pr create` body. When it became clear the PR delivered only Phase 1 of a two-phase scope (Phase 2 deferred to follow-up issue #531), the orchestrator ran `gh pr edit 530 --body-file ...` replacing `Closes #417` with `Part of #417` before merge. Despite the edited body, `gh issue view 417 --json closedByPullRequestsReferences,stateReason` after PR #530 merged showed the link intact and the issue auto-closed — leaving unmet AC on a closed issue (Phase 1 extraction shipped, Phase 2 extraction still pending in #531).
+
+**Mitigation — pick the right reference style upfront:** See the dispatching-subagents skill's scope-constraints section — if a split or downscope is anticipated, use a non-closing reference (`Part of #N`, `Related to #N`) from the start. Do not rely on being able to edit it back out later.
+
+**Post-facto recovery if an issue was auto-closed with unmet AC:** The `closedByPullRequestsReferences` link cannot be unlinked via a public GraphQL mutation (it is read-only, derived from historical PR body parsing at merge time). The orchestrator's recovery is to comment on the closed issue documenting the remaining scope and cross-linking it to the follow-up tracking the deferred work — do not silently leave a closed-but-incomplete issue with no trace of the remaining scope. Example: #417 → comment linking to #531 with explicit call-out "Phase 2 still pending".
+
 ## After merge
 
 If `<integration-branch>` is not the repo's default branch, GitHub will **not** auto-close `Closes #N` issues — the orchestrator must close them explicitly and release the issue lock, or zombie issues get re-dispatched and claim labels go stale. Protocol: see the issue-locking skill. Run the close-on-merge sweep every monitoring tick (see the orchestrating-slots skill).
