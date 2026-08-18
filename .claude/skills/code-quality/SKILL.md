@@ -1,6 +1,6 @@
 ---
 name: code-quality
-description: "Baseline maintainability bar for any code change: apply DRY/KISS/YAGNI/SOLID, notice when a file is taking on an unrelated responsibility it's already too large for, balance the test pyramid toward behavior/integration coverage over brittle heavy mocking, and — for UI work — use design tokens and reusable/atomic components instead of one-off styling. Use whenever writing or reviewing code, especially when the person who will read the diff can't independently judge maintainability (a non-technical stakeholder, an unattended pipeline, or a reviewer who only checks that it works)."
+description: "Baseline maintainability bar for any code change: think architecturally about the wider blast radius before committing to a fix, apply DRY/KISS/YAGNI/SOLID, notice when a file is taking on an unrelated responsibility it's already too large for, balance the test pyramid toward behavior/integration coverage over brittle heavy mocking, and — for UI work — use design tokens and reusable/atomic components instead of one-off styling. Use whenever writing or reviewing code, especially when the person who will read the diff can't independently judge maintainability (a non-technical stakeholder, an unattended pipeline, or a reviewer who only checks that it works)."
 ---
 
 # Code Quality: the maintainability bar nobody else is checking
@@ -13,6 +13,41 @@ Nobody else is going to.
 
 This is a smell-detector, not a lint rule. None of this is mechanically enforced by a script
 in this skill — it's judgment applied at the moment of writing or reviewing a change.
+
+## Think architecturally before committing to a fix
+
+The narrowest change that makes a reported symptom go away is not the same thing as the
+right fix. A senior engineer's default, on seeing a bug report, is to widen the lens before
+writing anything: what's the actual mechanism, does this same shape of problem exist
+anywhere else nearby, and what does this code path do under different (bigger, slower,
+more concurrent) conditions than the one that was just observed?
+
+Concrete shape of the mistake this section exists to prevent: a system exhibits "the first
+operation after a cold start behaves badly." The narrow fix special-cases the cold-start
+condition and stops there. The architectural fix asks the next question too — *why* does a
+burst of near-simultaneous events, cold-start or not, cascade into a pile of sequential
+blocking work in the first place — and fixes that, because the narrow patch alone leaves a
+real scaling/concurrency problem in place that a slightly different trigger (a big legitimate
+batch of real changes, not just a cold cache) will hit again. Both fixes "pass the test
+that was written for the reported symptom"; only one of them is actually done.
+
+Checklist to run before treating a fix as finished, not just "matches the reported symptom":
+
+- **Root cause, not the nearest special case.** If the fix is a conditional that detects one
+  specific triggering scenario, ask whether the underlying operation is unsound in general
+  and the trigger just happened to be how it was first noticed.
+- **Look for the same pattern elsewhere.** A bug found in one call site of a shared
+  helper, a duplicated pattern, or a repeated architectural idiom is worth a grep across the
+  rest of the codebase before calling the fix complete — the same defect shape sitting
+  unnoticed in three other places is common, not rare.
+- **Consider scale and concurrency, not just correctness.** Does this code path assume it
+  runs once, alone, on a small input — and what actually happens when that assumption is
+  false (a burst instead of one event, a slow dependency instead of a fast one, N callers
+  instead of one)? A fix that's only correct at the scale of the original bug report isn't
+  finished.
+- **Don't let a human have to point this out.** If the operator or a reviewer has to ask
+  "but what about the general case?" after a fix ships, that question should have been
+  asked and answered before the fix was proposed, not after.
 
 ## Clean-code principles, applied at the moment of writing
 
