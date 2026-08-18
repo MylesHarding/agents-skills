@@ -38,6 +38,7 @@ Allowed:
 - Use the interactive ask-question tool, if the run provides one, to clarify direction with the lead (see the next section).
 - Post the findings as ONE comment; when asking, post one emoji-answerable comment per open question (see below). On a rerun, read the reactions on your prior question comments.
 - Set the LoE field and the verdict label/status on that issue (per the control-field skill).
+- Execute `gh issue close <number> --reason completed` with a findings comment when the verdict is `complete-recommend-close` (see Verdict table below); this closes an issue that recon has determined requires no further work.
 
 Forbidden — on attempting any, stop and emit `TECH-RECON-ERROR: <what was attempted>`:
 
@@ -59,10 +60,13 @@ Two channels, in priority order:
    **HARD RULE: Ending your turn with clarifying questions expressed only in your own final assistant-message text — without having actually invoked either the interactive ask-question tool (channel 1) or `gh issue comment` (channel 2) — is itself a sandbox-contract violation, not a valid third option.** There is no "just tell them in my response" path. If you are below the 90% confidence threshold, your turn is not done until you have either called the ask-question tool, or made an actual `gh issue comment` call plus set `<needs-input-state>`. Printing the questions and stopping is exactly the bug this fix exists to prevent.
 2. **No question tool available** — the usual case for a fanned-out sub-agent, which runs non-interactively. Ask through **emoji-answerable comments** so the lead replies in one click, no typing:
    - **One comment per question.** Reactions on a single comment can't disambiguate multiple questions, so each open question (or each proposed direction to confirm) gets its own comment. Quote the ambiguous part, then list each option on its own line tagged with the distinct reaction emoji the lead clicks to choose it; for a yes/no, use 👍 confirm / 👎 deny on the proposed-direction comment.
-   - **Stay within the tracker's reaction set.** GitHub allows only eight reactions — 👍 👎 😄 🎉 😕 ❤️ 🚀 👀 — so map options onto those (e.g. 👍 = option A, 🎉 = B, 🚀 = C, 👀 = "none, see my reply") and never use number/letter emoji there; Jira's set is wider, but keep the mapping explicit either way.
+   - **State your own recommendation in the comment, every time — never a bare menu of options with no lean.** You already investigated before asking; that investigation almost always produces a preference, even a weak one. Say which option you'd pick and one line of why, the same way you would if a lead asked you directly in conversation. This is what makes a one-click "go with that" answer possible at all — a menu with no stated lean forces the lead to actually re-derive the tradeoff themselves, which defeats the point of an emoji-answerable question.
+   - **Reserve ❤️, globally, on every question, to mean "go with your stated recommendation."** GitHub allows only eight reactions — 👍 👎 😄 🎉 😕 ❤️ 🚀 👀 — never repurpose ❤️ for a substantive option; keep it free for this on every single question so the lead learns one consistent click across the whole session instead of re-reading a legend each time. The other seven cover the actual options: map them onto 👍 👎 😄 🎉 😕 🚀 (e.g. 👍 = option A, 🎉 = B, 🚀 = C) and 👀 = "none of these, see my reply." Jira's reaction set is wider — still reserve ❤️ there too, for one consistent convention across trackers.
+   - **Stay within the tracker's reaction set — never use number/letter emoji.** Map options onto the seven non-❤️ reactions above; Jira's set is wider, but keep the mapping explicit either way.
    - **Before posting, check every emoji you're about to use against that exact eight-item list — not "does this emoji fit the meaning", but "is this literal character one of the eight."** Confirmed live: an agent picked emoji for how well they matched each option's *meaning* (🤔 "decide later", ✅/❌ for yes/no, ⏸️/🔄 for "before/parallel/after") instead of checking them against the tracker's actual reaction set — none of those five are real GitHub reactions, so the lead had no way to react to any of them and had to wait for a corrected comment. The eight-item list above is exhaustive, not illustrative — if the emoji you want isn't literally in it, pick one of the eight and say what it means in the legend instead of reaching for a better-fitting one.
-   - **End every question comment with a one-line legend** stating exactly which emoji does what — e.g. `↩ React: 👍 keep current auth · 🎉 switch to sessions · 🚀 do both · 👀 none (reply below)`. The legend is mandatory; an un-legended emoji prompt is a guessing game.
+   - **On the rare question where you genuinely have no lean** (a real coin-flip, or the deciding factor is something only the lead knows), say so plainly instead of faking a preference — but ❤️ still means the same thing: "you pick, using your best judgment," and you're expected to actually pick and explain the pick on rerun, not default to the first-listed option.
    - **If you notice a question comment you already posted (this run or a prior one) used an invalid emoji or crammed more than one question into it, fix that exact comment — don't leave it live and post a replacement alongside it.** Get the comment's id from `gh issue view <N> --json comments` (or `getJiraIssue`), then edit it in place — `gh api -X PATCH repos/<owner>/<repo>/issues/comments/<comment_id> -f body=<corrected text>` (Jira: update the comment via its own API) — so there is exactly one live prompt per question, not an invalid original sitting above a comment that says "replaces earlier comment." Confirmed live: a corrected comment was posted as a new reply while the original, unreactable prompt stayed visible above it — the lead saw the broken one first and had already tried (and failed) to react to it before finding the fix further down the thread.
+   - **End every question comment with a one-line legend** stating exactly which emoji does what, always ending with the ❤️ line — e.g. `↩ React: 👍 keep current auth · 🎉 switch to sessions · 🚀 do both · 👀 none (reply below) · ❤️ go with the recommendation above`. The legend is mandatory; an un-legended emoji prompt is a guessing game.
    - Set `<needs-input-state>` and **STOP — do not guess an LoE.**
 
    On rerun, recover the answers from each question comment's **reactions** (plus any written reply — a written reply always overrides a reaction), then continue.
@@ -80,16 +84,22 @@ Two channels, in priority order:
    - 🚀 <option C — concrete>
    - 👀 none of these — I'll reply below
 
-   ↩ React to choose: 👍 A · 🎉 B · 🚀 C · 👀 none (then reply). Re-run recon and I'll resume from your answer.
+   **Recommendation: <option letter> — <one-line reason, code-grounded>.**
+
+   ↩ React to choose: 👍 A · 🎉 B · 🚀 C · 👀 none (then reply) · ❤️ go with the recommendation above. Re-run recon and I'll resume from your answer.
    ```
 
-**Rerun to continue (resume, not restart).** When recon stalls on posted questions, the lead answers them in the issue and reruns the recon command. On rerun, the agent FIRST reads its prior questions and the answers from the issue comments — **fetch reactions explicitly via `gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions` for each of your question comments** — folds them into its understanding (a written reply overrides a reaction), and — if now ≥90% — proceeds to the full findings and a `vetted`/`blocked` verdict. If gaps remain, it asks only the still-open questions (same two channels). Never re-ask an already-answered question. A `vetted` or `blocked` verdict is only legitimate once the ≥90% bar is met.
+**Rerun to continue (resume, not restart).** When recon stalls on posted questions, the lead answers them in the issue and reruns the recon command. On rerun, the agent FIRST reads its prior questions and the answers from the issue comments — **fetch reactions explicitly via `gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions` for each of your question comments** — folds them into its understanding (a written reply overrides a reaction), and — if now ≥90% — proceeds to the full findings and a `vetted`/`blocked`/`complete-recommend-close` verdict. If gaps remain, it asks only the still-open questions (same two channels). Never re-ask an already-answered question. A `vetted`, `blocked`, or `complete-recommend-close` verdict is only legitimate once the ≥90% bar is met.
+
+**Handling a ❤️ reaction.** It means "proceed with the recommendation stated in that comment" — not a fresh, unconstrained decision. Re-read your own stated recommendation on that comment and go with it exactly as written; note in the findings comment which questions were resolved this way (e.g. "❤️ on Q2 — proceeded with the stated recommendation: option B"), so the lead can see and override it later if they disagree.
+
+**Terminal verdicts:** `complete-recommend-close` and `investigation-concluded` are terminal — the issue is closed and rerun requests should be rejected (the issue is no longer open). The `vetted`, `blocked`, and `investigation-needs-human` verdicts allow rerun after the lead adjusts direction or posts research findings; do not treat them as terminal.
 
 ## What the findings comment must contain
 
 The deliverable is a single comment, written so the lead can accept the estimate and an implementer can later build from it without re-deriving the design. Sections:
 
-1. **Implementation approach** — the concrete plan in prose: which modules/functions change, the sequence, the pattern to follow (cite a prior PR/module if one sets precedent). Enough that the eventual dispatch brief can point at it.
+1. **Implementation approach** — the concrete plan in prose: which modules/functions change, the sequence, the pattern to follow (cite a prior PR/module if one sets precedent). Enough that the eventual dispatch brief can point at it. **Check for near-duplication while you're already reading the surrounding code, not as a separate pass:** an implementer scoped to this one issue has no visibility into how many other places already do the same thing — recon is the one read-only step positioned to see the wider codebase before anything is written. If tracing the approach surfaces that this issue's change would be the second, third, or later near-identical instance of a pattern (another poller reimplementing the same boilerplate, another wrapper differing only in one argument, a constant already read independently elsewhere), say so explicitly and pick one: fold the extraction into this issue's own approach if it's small, or name a companion follow-up issue if it's not — don't silently size only the narrow ask and let the duplication stand unremarked.
 2. **Affected code — verified `file:line`** — the touch-points, each verified by reading it (stale pointers are worse than none), same format as the issue-filing skill's evidence section. Mark "new file" where the change is additive.
 3. **Level of effort** — one `<loe-scale>` size **plus a one-line justification** (what makes it that size), and a **confidence** (low/med/high). Low confidence is a finding, not a failure — it usually means a risk or unknown below.
 4. **Risks, unknowns, open questions** — what could blow the estimate: hidden coupling, missing test coverage, perf/security/data-isolation concerns, ambiguous spec corners. Phrase decisions needed from a human as explicit `**Decision needed: …**` lines.
@@ -99,17 +109,20 @@ The deliverable is a single comment, written so the lead can accept the estimate
 
 Write sections 1, 4, and 6 as natural prose a human reviews — run them through the humanizer skill (see Token discipline). Keep `file:line`, the size token, and the contract line exact.
 
-## Investigation issues — research-plan output (for `investigation` labeled issues)
+## Investigation issues (for `investigation` labeled issues)
 
-When an issue carries the `investigation` label, technical-recon produces a **research plan** instead of an implementation approach and LoE. Investigation issues are top-of-funnel research asks ("go understand X") rather than build asks ("build X"). The research plan guides the human who will conduct the investigation and forms the findings when they post the research conclusion. Sections:
+When an issue carries the `investigation` label, technical-recon does the research itself, in this same dispatched turn, wherever the codebase/docs/existing precedent already contain the answer — it does **not** default to producing a plan for a human to execute later. Investigation issues are top-of-funnel research asks ("go understand X"), but most of what they ask is answerable by reading real code, existing tests, prior issues/PRs, and documentation already in the repo — the same read-only investigation recon already does for a normal groomed issue, just aimed at answering research questions instead of sizing an implementation.
 
-1. **Questions to answer** — the concrete research questions the investigation must resolve (not open-ended; grounded in what the lead flagged as unclear).
-2. **Investigation approach** — scope (which areas of the codebase, which docs, which external systems), methods (how to examine them — code review, API profiling, load testing, vendor docs, etc.), and data sources to consult.
-3. **Rough time-box** — estimated effort as a research time estimate, not an LoE estimate (e.g., "2–4 hours for a code/docs review and API profiling", not "S"). This guides the human's planning, not a dispatch estimate.
-4. **Risks, unknowns, investigation-specific** — what could block the research: missing access, undocumented APIs, vendor latency, or systems that only exhibit behavior under load.
-5. **Findings placeholder** — a sketch of what the research findings should include when the human posts the conclusion (e.g., "findings should address whether the vendor API guarantees atomicity and whether our current retry loop is adequate, plus any edge cases discovered").
+**Default path — conduct the research now, don't hand off a plan:**
 
-Write all sections as natural prose — not a template, but a narrative plan the human can follow. Keep the questions and data sources explicit and concrete. When the investigation concludes, a human posts the findings (not a recon agent) to close the issue — findings are not auto-computed, they are the research result itself.
+1. Read the issue's stated questions and scope.
+2. Investigate directly: trace the actual code, read the relevant docs, check existing precedent/prior art already in the repo — same evidence standard as any other recon pass (`file:line` citations, not assertions).
+3. Post the findings as a real, evidence-grounded answer to each question — a research *conclusion*, not a plan for someone else to follow.
+4. Route the conclusion to one of two outputs, per what the research actually produced — never leave both undone:
+   - **New knowledge, nothing to build:** close the issue with the findings comment as the permanent, citable research record.
+   - **A concrete build ask:** file one or more follow-up issues carrying the vetted approach the research produced (cross-link both directions — the new issue references this one; a comment here links to the new issue's number) and close this one. The spike issue IS the cataloged research record; the follow-up issue is what actually gets implemented — never bundle both into a single ticket.
+
+**Escape hatch — only when the research genuinely needs a human.** If answering the questions requires something this agent cannot do in its own turn (vendor API credentials it doesn't have, load-testing infrastructure, real user interviews, anything needing physical or organizational access it lacks) — then, and only then, fall back to the narrower research-plan output for a human to pick up: **Questions to answer**, **Investigation approach**, **Rough time-box**, **Risks/unknowns**, **Findings placeholder** (same five sections as before, written as natural prose, not a template). Set `<needs-input-state>` — the same state any other "a human must act here" case uses — rather than leaving the issue with no terminal label at all; state explicitly in the comment *why* this couldn't be resolved directly, so it reads as the deliberate exception path, not the default.
 
 ## Verdict — where the issue lands
 
@@ -120,6 +133,9 @@ Recon ends by moving the issue to exactly one state via the control-field skill:
 | **vetted** | Approach is clear, sized, no open decision, no open dependency | `<vetted-state>` + `<loe-field>` + the dispatch-recommendation labels |
 | **needs-spec-input** | A technical decision needs a human (architecture, product, security) before build, OR direction questions are pending the lead's answers (you were below the 90% bar) | `<needs-input-state>` + the questions / `**Decision needed**` comment; NOT `<vetted-state>`. The lead answers in the issue and reruns to continue. |
 | **blocked** | A dependency issue/PR/infra must land first | `<blocked-state>` + the dependency named in the comment |
+| **complete-recommend-close** | The issue describes work that is already complete per the current acceptance criteria — nothing remains to build, dispatch, or spec. Recon confirms this with high confidence. | Issue closed via `gh issue close <number> --reason completed`. A findings comment explains the conclusion and links back to evidence (merged PR, completed work, or acceptance criteria met). This is terminal; rerun requests on closed issues are no-ops. |
+| **investigation-concluded** | An `investigation`-labeled issue whose research was resolvable directly (the default path above) — findings posted and either (a) nothing to build, or (b) a follow-up build issue filed and cross-linked. | Issue closed via `gh issue close <number> --reason completed`. Terminal, same as `complete-recommend-close`. |
+| **investigation-needs-human** | An `investigation`-labeled issue whose research genuinely requires something this agent can't do in its own turn (the escape hatch above). | `<needs-input-state>` + the research-plan comment (Questions to answer / Investigation approach / Rough time-box / Risks / Findings placeholder) + an explicit note on why direct resolution wasn't possible. NOT terminal — a human conducts the research and posts findings to close it themselves. |
 
 `<vetted-state>` here means dev-vetted, not merely groomed — the orchestrator's dispatch filter can now trust it. (If your project's `<vetted-state>` is the same `ready-to-dispatch` the intake recon uses, technical recon is what earns it for non-trivial work; treat a `ready-to-dispatch` with no recon comment and a non-trivial ask as not-yet-vetted.)
 
@@ -130,12 +146,17 @@ Each recon agent ends with exactly one line:
 ```
 TECH-RECON <id>: loe=<XS|S|M|L|XL> confidence=<low|med|high> verdict=<vetted|blocked>[ split=<N>][ model:<tier>][ effort:<level>][ deps=<ref,...>]
 TECH-RECON <id>: verdict=needs-spec-input questions=<N> (awaiting the lead's answers; rerun to continue)
+TECH-RECON <id>: verdict=complete-recommend-close confidence=<med|high> (issue already complete, closed via gh issue close)
+TECH-RECON <id>: verdict=investigation-concluded (findings posted, closed via gh issue close[, follow-up=<ref>])
+TECH-RECON <id>: verdict=investigation-needs-human questions=<N> (research needs human-only access; rerun to continue)
 TECH-RECON-ERROR: <message>
 ```
 
-A `vetted` or `blocked` line is only emitted once direction confidence is ≥90%; otherwise the agent emits the `needs-spec-input questions=<N>` line and stops.
+A `vetted`, `blocked`, or `complete-recommend-close` line is only emitted once direction confidence is ≥90%; otherwise the agent emits the `needs-spec-input questions=<N>` line and stops. The `complete-recommend-close` verdict includes no LoE field (since there is no work to estimate) and closes the issue directly instead of setting a label.
 
 Validate the line against what was actually set (`gh issue view <N> --json labels,comments` / `getJiraIssue`) — an agent can report a verdict without performing the mutation (verify-then-trust, per the dispatching-subagents skill).
+
+**Before stopping on `questions=<N>` where N > 1, re-fetch your own posted comments and count them.** A confirmed failure mode: an agent that correctly reasoned through two distinct open questions wrote them both into a single comment instead of two — reactions on one comment can't disambiguate which question they answer (this got worse when both questions happened to reuse the same emoji for different meanings), silently breaking the lead's ability to respond at all. Re-fetching your own comments and confirming the count matches N is the check that catches this before you stop; if a comment ended up carrying more than one question block, split it into separate comments right now, in this same turn — do not report `questions=<N>` and stop while that mismatch exists.
 
 ## Batch fan-out
 
