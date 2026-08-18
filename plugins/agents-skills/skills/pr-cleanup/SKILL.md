@@ -42,7 +42,7 @@ You do NOT touch: dispatching issues (the dispatch lane — `dispatching-subagen
 1. Find recently closed agent PRs not yet cleaned (both MERGED and closed-unmerged).
 2. **MERGED** → full close-out (see the issue-locking skill's close-on-merge protocol): close the linked issue (`Closes #N`) and/or transition the Jira issue to its done state, remove the `<claim-lock>` claim marker, clear the assignee, post a brief closing note.
 3. **Closed-unmerged (abandoned PR)** → release the lock so the issue is re-dispatchable: remove the claim marker, clear the assignee, post a note that the PR closed without merging. **Do NOT close the issue — leave it open.** This is the backstop for a dispatch that opened a PR then died: the lock is freed but the work is still tracked.
-4. **Local cleanup** (either case): delete the closed branch, `git worktree remove` the spent worktree under `<worktree-dir>`, prune.
+4. **Local cleanup** (either case): release the worktree ownership record with `node <checkout-lock-cmd> release-worktree --worktree <worktree-dir>/<name>` (if `<checkout-lock-cmd>` is bound), delete the closed branch, `git worktree remove` the spent worktree under `<worktree-dir>`, prune.
 5. **Salvage caution:** before deleting any worktree/branch, confirm it belongs to a closed PR and not to in-flight work — a parallel actor may own it (see *Stalled-agent recovery* in `dispatching-subagents`). When unsure, skip and report; do not delete.
 
 ## Why this lane exists (the auto-close gap)
