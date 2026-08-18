@@ -38,6 +38,7 @@ Allowed:
 - Use the interactive ask-question tool, if the run provides one, to clarify direction with the lead (see the next section).
 - Post the findings as ONE comment; when asking, post one emoji-answerable comment per open question (see below). On a rerun, read the reactions on your prior question comments.
 - Set the LoE field and the verdict label/status on that issue (per the control-field skill).
+- Execute `gh issue close <number> --reason completed` with a findings comment when the verdict is `complete-recommend-close` (see Verdict table below); this closes an issue that recon has determined requires no further work.
 
 Forbidden — on attempting any, stop and emit `TECH-RECON-ERROR: <what was attempted>`:
 
@@ -81,7 +82,9 @@ Two channels, in priority order:
    ↩ React to choose: 👍 A · 🎉 B · 🚀 C · 👀 none (then reply). Re-run recon and I'll resume from your answer.
    ```
 
-**Rerun to continue (resume, not restart).** When recon stalls on posted questions, the lead answers them in the issue and reruns the recon command. On rerun, the agent FIRST reads its prior questions and the answers from the issue comments — **fetch reactions explicitly via `gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions` for each of your question comments** — folds them into its understanding (a written reply overrides a reaction), and — if now ≥90% — proceeds to the full findings and a `vetted`/`blocked` verdict. If gaps remain, it asks only the still-open questions (same two channels). Never re-ask an already-answered question. A `vetted` or `blocked` verdict is only legitimate once the ≥90% bar is met.
+**Rerun to continue (resume, not restart).** When recon stalls on posted questions, the lead answers them in the issue and reruns the recon command. On rerun, the agent FIRST reads its prior questions and the answers from the issue comments — **fetch reactions explicitly via `gh api repos/<owner>/<repo>/issues/comments/<comment_id>/reactions` for each of your question comments** — folds them into its understanding (a written reply overrides a reaction), and — if now ≥90% — proceeds to the full findings and a `vetted`/`blocked`/`complete-recommend-close` verdict. If gaps remain, it asks only the still-open questions (same two channels). Never re-ask an already-answered question. A `vetted`, `blocked`, or `complete-recommend-close` verdict is only legitimate once the ≥90% bar is met.
+
+**Terminal verdicts:** A `complete-recommend-close` verdict is terminal — the issue is closed and rerun requests should be rejected (the issue is no longer open). The `vetted` and `blocked` verdicts allow rerun after the lead adjusts direction; do not treat them as terminal.
 
 ## What the findings comment must contain
 
@@ -118,6 +121,7 @@ Recon ends by moving the issue to exactly one state via the control-field skill:
 | **vetted** | Approach is clear, sized, no open decision, no open dependency | `<vetted-state>` + `<loe-field>` + the dispatch-recommendation labels |
 | **needs-spec-input** | A technical decision needs a human (architecture, product, security) before build, OR direction questions are pending the lead's answers (you were below the 90% bar) | `<needs-input-state>` + the questions / `**Decision needed**` comment; NOT `<vetted-state>`. The lead answers in the issue and reruns to continue. |
 | **blocked** | A dependency issue/PR/infra must land first | `<blocked-state>` + the dependency named in the comment |
+| **complete-recommend-close** | The issue describes work that is already complete per the current acceptance criteria — nothing remains to build, dispatch, or spec. Recon confirms this with high confidence. | Issue closed via `gh issue close <number> --reason completed`. A findings comment explains the conclusion and links back to evidence (merged PR, completed work, or acceptance criteria met). This is terminal; rerun requests on closed issues are no-ops. |
 
 `<vetted-state>` here means dev-vetted, not merely groomed — the orchestrator's dispatch filter can now trust it. (If your project's `<vetted-state>` is the same `ready-to-dispatch` the intake recon uses, technical recon is what earns it for non-trivial work; treat a `ready-to-dispatch` with no recon comment and a non-trivial ask as not-yet-vetted.)
 
@@ -128,10 +132,11 @@ Each recon agent ends with exactly one line:
 ```
 TECH-RECON <id>: loe=<XS|S|M|L|XL> confidence=<low|med|high> verdict=<vetted|blocked>[ split=<N>][ model:<tier>][ effort:<level>][ deps=<ref,...>]
 TECH-RECON <id>: verdict=needs-spec-input questions=<N> (awaiting the lead's answers; rerun to continue)
+TECH-RECON <id>: verdict=complete-recommend-close confidence=<med|high> (issue already complete, closed via gh issue close)
 TECH-RECON-ERROR: <message>
 ```
 
-A `vetted` or `blocked` line is only emitted once direction confidence is ≥90%; otherwise the agent emits the `needs-spec-input questions=<N>` line and stops.
+A `vetted`, `blocked`, or `complete-recommend-close` line is only emitted once direction confidence is ≥90%; otherwise the agent emits the `needs-spec-input questions=<N>` line and stops. The `complete-recommend-close` verdict includes no LoE field (since there is no work to estimate) and closes the issue directly instead of setting a label.
 
 Validate the line against what was actually set (`gh issue view <N> --json labels,comments` / `getJiraIssue`) — an agent can report a verdict without performing the mutation (verify-then-trust, per the dispatching-subagents skill).
 
