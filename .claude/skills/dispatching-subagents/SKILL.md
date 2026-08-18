@@ -250,17 +250,23 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
      --title "<conventional title>" --body "<structured body with Closes #<N>>" \
      --assignee "$(gh api user --jq .login)"
    Add any labels the project requires at creation time.
-5. Verify the PR landed with the correct assignee and labels:
+5. Post both required gate statuses (ac-compliance-gate and design-qa-gate) for fast
+   "not applicable" propagation to PRs that don't trigger them:
+   tsx scripts/ensure-gate-statuses.ts <PR#> <repo-slug>
+   This call is idempotent and safe even if a gate does apply (it checks applicability
+   and posts the correct status — success/pending/failure — immediately, so waiting on
+   pr-checks watcher ticks is never required).
+6. Verify the PR landed with the correct assignee and labels:
    gh pr view <PR#> --json assignees,labels
    Repair via the REST API if anything is missing — never via `gh pr edit`
    (can exit 0 yet persist nothing).
-6. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
+7. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
    only at the ready-for-review transition. For Design+QA-eligible PRs
    (changed files under `tools/dashboard/public/`), the design-qa-review-gate
    runs first and arms auto-merge post-PASS verdict. For non-dashboard PRs, the
    pr-comments watcher arms auto-merge once all review threads are resolved and
    the PR is flipped to ready-for-review.
-7. Drive the PR to green per the driving-prs-to-merge skill: respond to
+8. Drive the PR to green per the driving-prs-to-merge skill: respond to
    every review thread including <bot-reviewer>'s, fix CI, stay rebased.
 ```
 
@@ -273,7 +279,7 @@ Require the agent to report back, explicitly:
 - PR number and URL.
 - Files modified.
 - Tests added/changed (count and layer), and the `<traceability-scheme>` ID used if applicable.
-- Confirmation that the assignee and required labels are set, and that auto-merge is enabled (state which command was used).
+- Confirmation that the assignee and required labels are set, and that auto-merge is enabled (state which command was used). Also confirm that gate statuses (ac-compliance-gate, design-qa-gate) have been posted via ensure-gate-statuses.ts — even a "not applicable" status unblocks immediately.
 - Final `git status --short` output from the worktree (proves nothing is left uncommitted).
 - Anything that needs operator clarification.
 
