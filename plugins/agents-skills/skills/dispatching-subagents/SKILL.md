@@ -186,12 +186,21 @@ GIT DISCIPLINE:
   salvaged and resumed from the last commit in minutes rather than
   replaying the whole task from scratch.
 - Never run `git reset --hard`, `git rebase -i`, `git checkout <other-branch>`,
-  or any history-destroying command.
+  `git stash`, or `git stash pop`, or any history-destroying or repo-wide
+  state-mutating command.
 - If git state ever looks unexpected (wrong branch, commits you don't
   recognize, dirty files you didn't touch): STOP and report. Do not
   "clean up".
 - Stay inside your worktree for the entire task.
 ```
+
+**Why `git stash` is banned:** stash operates on a repo-wide shared ref (`.git/refs/stash`),
+not something scoped to the current worktree. Running `git stash pop` to "resolve" uncommitted
+changes inside a task worktree can pop a completely *different process's* safety-preserved
+stash (e.g., a worker-loop session's "preserving pre-existing uncommitted primary-checkout state"
+entry), applying it into the wrong worktree and causing a merge conflict. If you have uncommitted
+changes that you think are worth preserving, you are almost certainly in the wrong directory or
+about to interfere with someone else's safety net — stop and report instead of reaching for stash.
 
 **Worktree isolation is now enforced mechanically:** issue #489 added a pre-commit hook that rejects any attempt to commit to the integration branch (`main`) from the primary checkout. This means the prompt instruction above is backed by an automatic safeguard — if you accidentally issue `git commit` from the wrong location, the hook will catch it immediately with a helpful error message, not silently let the stray commit land in the primary checkout's history.
 

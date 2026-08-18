@@ -7,14 +7,14 @@ description: "Reproduce and root-cause a front-end bug in a real browser using w
 
 Front-end symptoms often can't be root-caused from code alone — the answer is in the real network traffic, the actual API responses, the console, and the DOM as the signed-in user sees it. This skill captures that evidence with **whatever browser MCP the environment has**, so the workflow isn't tied to one tool. Not everyone can run the Chrome (`claude-in-chrome`) MCP; Playwright and Cypress MCPs are common alternatives, and Chrome DevTools MCP is another.
 
-## Pick the browser MCP (in order), then degrade
+## Pick the diagnosis method (in order), then degrade
 
-1. **`claude-in-chrome`** — best when you need the operator's *real signed-in* Chrome session (their cookies, their data). Works in its own new tab group.
+1. **`claude-in-chrome` MCP** — best when you need the operator's *real signed-in* Chrome session (their cookies, their data). Works in its own new tab group.
 2. **Playwright MCP** — a clean automated browser; great when you can log in with test creds or the page is public.
 3. **Cypress MCP** — same idea via a Cypress/Playwright-core runner with ARIA snapshots and network intercept.
 4. **Chrome DevTools MCP** — strong for network/console/performance inspection.
-
-Use the first one that's connected. If **none** is available: don't fake it — give the operator the exact repro steps to run and ask them to paste the failing request/response and console output, or file with code-only evidence and mark the browser-derived claims unverified. Say which.
+5. **Direct Playwright script** — if this repository has `playwright` as an installed dependency and no MCP is available, write a throwaway Node script (see the "When no MCP is available" section below) to capture runtime errors that static analysis misses.
+6. **Ask the operator** — if none of the above are available, give the operator the exact repro steps to run and ask them to paste the failing request/response and console output, or file with code-only evidence and mark the browser-derived claims unverified. Say which.
 
 ## Capability map (do the same step on any MCP)
 
@@ -48,7 +48,70 @@ These are the prefixes the bundled commands pre-approve. If your server uses a d
 }
 ```
 
-## Ground rules (every MCP)
+## When no MCP is available: direct Playwright script
+
+If none of the MCP options are available *and* this repository has `playwright` as an installed dependency (check `package.json`), diagnosis can still work via a throwaway Node.js script running Playwright directly. This approach bypasses MCP entirely and works from the shell:
+
+**Why this is useful:** runtime errors (ReferenceError, TypeError, unhandled promise rejection) that only manifest when the page actually loads, executes, and renders are not catchable by static analysis. An MCP-less diagnosis can still capture these by driving a real page load, listening to console/network events, and taking screenshots.
+
+**Setup:** write a throwaway script into `scratch/.tmp/` (not `/tmp` — bare ESM `import { chromium } from "playwright"` resolves against the script's own directory's `node_modules`, so it fails with `ERR_MODULE_NOT_FOUND` from outside the repo). Register listeners *before* `page.goto` so you don't miss early errors:
+
+```javascript
+// scratch/.tmp/diagnose-<issue-number>.mjs
+import { chromium } from "playwright";
+
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage();
+
+const logs = [];
+const errors = [];
+const badResponses = [];
+
+page.on("console", (msg) => {
+  if (msg.type() === "error" || msg.type() === "warning") {
+    logs.push(`[${msg.type()}] ${msg.text()}`);
+  }
+});
+
+page.on("pageerror", (err) => {
+  errors.push(err.toString());
+});
+
+page.on("requestfailed", (req) => {
+  badResponses.push(`${req.method()} ${req.url()}`);
+});
+
+page.on("response", (resp) => {
+  if (resp.status() >= 400) {
+    badResponses.push(`${resp.status()} ${resp.url()}`);
+  }
+});
+
+await page.goto("http://localhost:3000/path/to/reproduce", { waitUntil: "networkidle" });
+await page.waitForTimeout(1000); // brief settle wait
+await page.screenshot({ path: "scratch/.tmp/diagnosis-screenshot.png", fullPage: true });
+
+console.log("=== CONSOLE/ERRORS ===");
+console.log(logs.join("\n"));
+console.log(errors.join("\n"));
+console.log("=== BAD RESPONSES ===");
+console.log(badResponses.join("\n"));
+
+await browser.close();
+```
+
+Run it with the toolchain prefix (if any) from inside the repo:
+
+```bash
+cd <repo-root>
+node scratch/.tmp/diagnose-<issue-number>.mjs
+```
+
+Then clean up the script and screenshot after you extract the evidence — `scratch/.tmp/` is gitignored and is where throwaway diagnostic artifacts live.
+
+**Limitations:** this only works when the service is running locally (or you have a test environment URL). It works with public pages or test credentials, but not with operator-specific auth (for that, you need the operator to run the repro via `claude-in-chrome`). If the page needs a logged-in session, either use the operator's real browser via `claude-in-chrome`, or file with "browser diagnosis unverified — operator repro needed" and specify the exact repro steps.
+
+## Ground rules (every MCP and direct script)
 
 - **Isolate.** Work in a fresh context/tab group, never the operator's existing tabs. With `claude-in-chrome`, call `tabs_context_mcp` first and never reuse tab IDs across sessions; with Playwright/Cypress, use a fresh context. One agent, one context — that's what keeps concurrent diagnostics from colliding.
 - **Act like a careful signed-in user.** Navigate, inspect, and read freely. Mutate only to reproduce the symptom, preferably against test/disposable data. Never do irreversible or outward-facing actions (payments, emails/invites to real people, deletes with no undo) — surface those as "needs operator repro." Track every mutation and clean up; if residue can't be cleaned, list it in the issue so it isn't mistaken for organic data.
