@@ -175,7 +175,29 @@ Every exit path has a release. The semantics are deliberately **asymmetric** —
 
 ### PR merged into `<integration-branch>` — release AND explicitly close
 
-GitHub's `Closes #N` keyword only auto-closes issues when the PR merges into the repo's **default** branch. If your agent PRs land on a non-default `<integration-branch>`, every issue silently stays open after its fix merges: the queue fills with phantom work, other operators re-dispatch already-solved problems, and claim labels stick around. (In production this produced zombie recon dispatches on merged work, and one session missed the explicit close nine times before the operator caught it.) The orchestrator must close explicitly, three commands in order:
+GitHub's `Closes #N` keyword only auto-closes issues when the PR merges into the repo's **default** branch. If your agent PRs land on a non-default `<integration-branch>`, every issue silently stays open after its fix merges: the queue fills with phantom work, other operators re-dispatch already-solved problems, and claim labels stick around. (In production this produced zombie recon dispatches on merged work, and one session missed the explicit close nine times before the operator caught it.) The orchestrator must close explicitly — but ONLY after confirming all linked PRs are merged (see below).
+
+**Cross-repo PR gate (required before any of the three steps below):**
+
+Before closing the issue, check if the issue body or comments contain a `## Cross-repo PRs`
+checklist. If one does, verify **live** (do not trust the checklist's checkbox state) that
+EVERY listed PR is actually `MERGED`:
+
+```bash
+# For each repo/PR listed on the checklist, e.g.:
+gh pr view <repo>#<N> --json state --jq '.state'
+# Must return: "MERGED"
+```
+
+If any listed PR is still open, WITHHOLD the close-on-merge flow:
+- Do NOT run the three commands below
+- Update the checklist to reflect which PRs ARE merged (check off those lines)
+- Post a comment naming which PR(s) are still outstanding
+- Leave the issue open
+- Return — the issue will be closed once all PRs merge
+
+If all listed PRs are merged, or if no such checklist exists, proceed with the three-step
+close:
 
 ```bash
 # 1. release the lock label (assignee RETAINED as completion credit)
@@ -188,7 +210,7 @@ gh issue comment <N> --body "Session lock released — PR #<PR-number> merged."
 
 **Dashboard event (optional):** after step 3, if `<dashboard-emit-cmd>` is bound, run `node <dashboard-emit-cmd> --source gh-issue-locking --type merge --entity-type issue --entity-id "#<N>" --message "issue #<N> resolved by PR #<PR-number>"`. Best-effort — ignore any failure.
 
-Retaining the assignee on a completed issue is intentional: it is the at-a-glance record of who landed it. If your project merges straight to the default branch, the explicit close is unnecessary (auto-close fires) but steps 1 and 3 still apply.
+Retaining the assignee on a completed issue is intentional: it is the at-a-glance record of who landed it. If your project merges straight to the default branch, the explicit close is unnecessary (auto-close fires) but the cross-repo gate and steps 1 and 3 still apply.
 
 ### PR closed WITHOUT merging — full release back to the queue
 

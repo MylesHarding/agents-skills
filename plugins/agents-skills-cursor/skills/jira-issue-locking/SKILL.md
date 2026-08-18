@@ -189,7 +189,30 @@ Every exit path has a release. The semantics are deliberately **asymmetric** —
 
 ### PR merged into `<integration-branch>` — release AND explicitly transition to Done
 
-Do not rely on Jira's PR-merge auto-transition. Jira's GitHub/Bitbucket integration *can* auto-move an issue to a done status when a PR merges, but only if the project is configured with smart-commit / development-panel automation and the PR carries the Jira key (`PROJ-123` in branch or title). If that automation is absent — or your agent PRs land on a non-default `<integration-branch>` the automation does not watch — every issue silently stays open after its fix merges: the queue fills with phantom work, other operators re-dispatch already-solved problems, and claim labels stick around. (In practice this produced zombie recon dispatches on merged work, and one session missed the explicit transition nine times before the operator caught it.) The orchestrator must transition explicitly, three operations in order:
+Do not rely on Jira's PR-merge auto-transition. Jira's GitHub/Bitbucket integration *can* auto-move an issue to a done status when a PR merges, but only if the project is configured with smart-commit / development-panel automation and the PR carries the Jira key (`PROJ-123` in branch or title). If that automation is absent — or your agent PRs land on a non-default `<integration-branch>` the automation does not watch — every issue silently stays open after its fix merges: the queue fills with phantom work, other operators re-dispatch already-solved problems, and claim labels stick around. (In practice this produced zombie recon dispatches on merged work, and one session missed the explicit transition nine times before the operator caught it.) The orchestrator must transition explicitly — but ONLY after confirming all linked PRs are merged (see below).
+
+**Cross-repo PR gate (required before any of the three steps below):**
+
+Before transitioning the issue, check if the issue body or comments contain a `## Cross-repo PRs`
+checklist. If one does, verify **live** (do not trust the checklist's checkbox state) that
+EVERY listed PR is actually `MERGED`:
+
+```
+# For each repo/PR listed on the checklist, e.g. GitHub PRs:
+gh pr view <repo>#<N> --json state --jq '.state'
+# Must return: "MERGED"
+# Or for Jira-linked GitHub PRs, use the equivalent GitHub API call via the Atlassian MCP
+```
+
+If any listed PR is still open, WITHHOLD the transition flow:
+- Do NOT run the three operations below
+- Update the checklist to reflect which PRs ARE merged (check off those lines)
+- Post a comment naming which PR(s) are still outstanding
+- Leave the issue in its current state
+- Return — the issue will be transitioned once all PRs merge
+
+If all listed PRs are merged, or if no such checklist exists, proceed with the three-step
+transition:
 
 ```
 # 1. release the lock label (assignee RETAINED as completion credit)
@@ -201,7 +224,7 @@ addCommentToJiraIssue(PROJ-123): "Resolved by PR #1234 (merged into `<integratio
 addCommentToJiraIssue(PROJ-123): "Session lock released — PR #1234 merged."
 ```
 
-Retaining the assignee on a completed issue is intentional: it is the at-a-glance record of who landed it. Even where the project HAS reliable auto-transition configured, the explicit `transitionJiraIssue` is cheap insurance and steps 1 and 3 still apply.
+Retaining the assignee on a completed issue is intentional: it is the at-a-glance record of who landed it. Even where the project HAS reliable auto-transition configured, the explicit `transitionJiraIssue` is cheap insurance and the cross-repo gate and steps 1 and 3 still apply.
 
 ### PR closed WITHOUT merging — full release back to the queue
 

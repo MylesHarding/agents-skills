@@ -175,6 +175,8 @@ PRE-PUSH HYGIENE (non-negotiable):
 - Name the `<test-layers>` layer the behaviour should be covered at — the cheapest layer that actually exercises it — and, if the project uses `<traceability-scheme>`, the ID the test must carry.
 - Forbid writes to shared append-only files (team learnings logs, changelogs) unless the issue is about them — they are chronic rebase-conflict generators when every agent appends.
 
+**Closing-keyword guidance for splits and downscoping.** If the issue's scope might be split or downscoped during review (some AC deferred to a follow-up issue, or the PR shipped Phase 1 of N planned phases), instruct the agent to use a non-closing reference in the PR body — e.g., `Part of #N`, `Related to #N`, or `Phase 1 of #N` — NOT `Closes #N`. Reason: GitHub's `closedByPullRequestsReferences` link is established the moment a closing keyword (`Closes`/`Fixes`/`Resolves` + `#N`) appears in *any* revision of the PR body and persists even after the keyword is edited out. Editing the body text alone does NOT remove the link; if the PR merges with that link intact, the issue auto-closes even if work remains. Evidence: issue #417 (2026-08-18, PR #530) — Phase 1 PRs were briefed with `Closes` keywords; orchestrator tried to downscope by editing body to `Part of` before merge; issue still auto-closed with unmet AC. Prevention: make the decision upfront during brief-writing. If a split is already anticipated, avoid closing keywords; let the issue stay open to be properly closed when the final phase lands.
+
 ### (f) Git discipline — destructive ops banned, STOP-and-report on surprises
 
 Include verbatim:
