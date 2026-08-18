@@ -69,7 +69,7 @@ comment why, leave the label, move to the next candidate (same posture as the
 access-gated model fallback in gh-issue-labels: release, don't sit on it,
 don't downgrade silently).
 
-## Worktree provisioning
+## Worktree provisioning — isolated per-task git worktrees
 
 Once resolved, before writing the dispatch brief:
 
@@ -78,14 +78,34 @@ WORKTREE=$(.claude/skills/registry-dispatch/scripts/ensure-worktree.sh \
   "<worktree_base>" "<github_url>" "<default_branch>" "issue-<N>-<slug>")
 ```
 
-This clones the target repo on first use, or fetches + re-branches on
-subsequent dispatches — it never touches the target repo if the local
-`worktree_base` already exists with a *different* origin (aborts loudly
-instead of silently operating on the wrong checkout). The printed path is the
-`cwd` for the dispatched sub-agent — **not** the meta repo's own working
-directory. This is a plain clone of the target repo, unrelated to the meta
-repo's git history; don't confuse it with a `git worktree` of the meta repo
-itself.
+This provisions a **per-task isolated git worktree** to prevent concurrent
+dispatch work from colliding in the same checkout (see issue #555 for the
+real incident — concurrent `/work` sessions racing a shared `forks/<name>/`
+clone caused branch-checkout collisions).
+
+**How it works:**
+1. **Base clone setup** — Clones the target repo to `<worktree_base>` on first
+   use, or just fetches + validates it on subsequent dispatches. Never touches
+   the target repo if `worktree_base` already exists with a different origin
+   (aborts loudly instead of silently operating on the wrong checkout).
+2. **Per-task worktree creation** — Inside the base clone, creates a fresh
+   `git worktree add` at `<worktree_base>/.worktrees/<branch-name>/`, isolated
+   from concurrent tasks. If a worktree for this branch already exists (e.g.,
+   on retry), it is cleaned up and re-created (idempotent).
+3. **Branch checkout** — Checks out the feature branch fresh off
+   `origin/<default_branch>` within the isolated worktree.
+
+The printed path is the isolated worktree directory — the `cwd` for the
+dispatched sub-agent — **not** the base clone or the meta repo. This is a
+`git worktree` of the target repo (not of the meta repo), fully isolated per
+task and safe for concurrent use.
+
+**Cleanup**: When a fork-targeted dispatch completes (PR merged or closed), the
+dispatched sub-agent's worktree should be manually removed to avoid accumulation:
+`git -C <worktree_base> worktree remove <worktree_path>`. (This is distinct
+from the meta repo's own `.worktrees/<name>` cleanup, which is automated by the
+`pr-cleanup` lane. Fork-targeted worktrees are manual cleanup for now, since
+fork repos have no equivalent of the meta repo's orchestrator loop.)
 
 `agents_allowed` and `tags` from the registry entry travel into the dispatch
 brief as scope/context, same as any other brief field in dispatching-subagents.

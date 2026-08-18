@@ -119,6 +119,15 @@ gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){
   -f o=<owner> -f r=<repo> -F n=<PR#>
 ```
 
+### Status check contexts: ac-compliance-gate and design-qa-gate
+
+Beyond CI checks, two advisory-turned-required status contexts gate PRs once branch protection is enabled:
+
+- **`ac-compliance-gate`** — Present on any PR whose linked issue (if any) has acceptance criteria. Posts `success` for PRs with no linked issue or no AC section ("not applicable"), `success` if all criteria are met, or `failure` if unmet.
+- **`design-qa-gate`** — Present on any PR that touches `tools/dashboard/public/`. Posts `success` for PRs that don't affect the dashboard ("not applicable"), `success` if design+QA review passed, or `failure` if changes were requested.
+
+**Expected behavior:** A PR with `mergeStateStatus: BLOCKED` waiting on one of these contexts is normal while the gate is being dispatched or reviewed. **Never** try to route around these checks — no `gh pr merge --admin`, no posting synthetic statuses yourself, no disabling branch protection. If a gate genuinely hasn't been dispatched yet for a PR that needs it, dispatch it (via the orchestrator or `driving-prs-to-merge` protocol); forcing a merge bypasses the entire quality intent those gates exist to enforce.
+
 ## CI failure triage — in this order
 
 ### 1. Read the failing job's actual log

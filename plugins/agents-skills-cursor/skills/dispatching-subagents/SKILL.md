@@ -118,6 +118,8 @@ A failed acquire (lock held by someone else, not yet stale) must retry with back
 
 **Symlink caveat (forks/* are primary-checkout-only):** before writing a brief, check whether any in-scope path is a symlink pointing into `forks/` by running `git ls-tree HEAD -- <path>` and looking for mode `120000`. If found, the target is present only in the primary checkout (since `forks/*` is gitignored in most adopting projects and never checked out inside worktrees). Instruct the agent to edit the real file under `forks/<name>/` directly in that checkout — never let it replace the symlink with a real file in the worktree, which silently breaks the fork bridge. See `docs/vendor-forks.md` for the full context on fork bridges.
 
+**Compile-rules caveat:** if the project's build system uses a `compile-rules` script or similar code-generation step that reads symlinked skill files, do NOT instruct the agent to run it from inside the worktree — that script will fail loudly (by design) because `forks/agents-skills` is not present in worktrees. Instead, either: (1) run any such compilation step in the primary checkout only, or (2) if the agent must run it in the worktree, first symlink the fork into the worktree: `ln -s <primary-checkout>/forks/agents-skills forks/agents-skills`. Most projects handle this automatically as part of install/build, so verify your project's actual configuration before writing the brief; do not include this caveat unless the script or build step is explicitly in-scope for the issue.
+
 ### (c) Toolchain prefix — hooks need the right runtime
 
 If `<toolchain-prefix>` is non-empty, include the exact shell prefix that makes the project's git hooks runnable in a fresh non-interactive shell, and the rule that goes with it:
@@ -190,6 +192,8 @@ GIT DISCIPLINE:
   "clean up".
 - Stay inside your worktree for the entire task.
 ```
+
+**Worktree isolation is now enforced mechanically:** issue #489 added a pre-commit hook that rejects any attempt to commit to the integration branch (`main`) from the primary checkout. This means the prompt instruction above is backed by an automatic safeguard — if you accidentally issue `git commit` from the wrong location, the hook will catch it immediately with a helpful error message, not silently let the stray commit land in the primary checkout's history.
 
 Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" unexpected state can silently destroy prior commits; recovery then needs `git fsck --unreachable`. Cheaper to ban the command than to fish objects out of the GC.
 
