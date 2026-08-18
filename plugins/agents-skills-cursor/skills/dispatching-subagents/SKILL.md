@@ -66,6 +66,35 @@ Resolve both from three sources, highest precedence first: (1) an explicit opera
 
 Claim the issue before spawning the agent, never after — the window between dispatch and lock is exactly when concurrent operators double-claim. The claim has **three signals**: the claim marker (`<claim-label>` or the tracker's claim field), the assignee set to your resolved operator login, and a machine-parseable lock comment. Re-verify the assignee list is empty immediately before locking; queue/status markers alone are not authoritative — a stale `ready-to-dispatch` marker has caused multiple double-locked issues. Full protocol, lock-comment format, and stale-expiry: see the issue-locking skill.
 
+### 3a. Lock re-verification check after worktree setup
+
+After the worktree and branch have been created and the lock comment has been posted, but **before** calling the implementer agent, re-verify that the lock comment this session just posted is still present on the issue. A narrow window exists between posting the lock comment and finishing worktree setup during which another session's stale-lock-reclaim sweep could still auto-reclaim the lock (before any PR exists yet for its own PR-search fallback to detect). This re-check catches that window defensively.
+
+Execute the re-verification immediately after lock-posting and before dispatch:
+
+```bash
+gh issue view <N> --json comments --jq '.comments[] | select(.body | contains("claude-lock")) | .body'
+```
+
+If the session's own lock marker (posted moments earlier) is no longer present in the results, treat this as a lost claim and abort:
+
+1. Remove the `agent-claimed` label via `gh issue edit <N> --remove-label agent-claimed`.
+2. Remove this session's assignee entry via `gh issue edit <N> --assignee ""` (or the tracker's equivalent clear-assignee operation).
+3. Remove the worktree just created: `git worktree remove <worktree-dir>/<name>`.
+4. Delete the branch: `git -C <repo-root> branch -D <branch-name>`.
+5. Return to the issue-selection loop (section 1 of **orchestrating-slots** or step 5 of **worker-loop**) to select a different candidate issue — do not retry the same issue in a loop, and do not proceed to dispatch.
+
+This mirrors the exact race-loss recovery pattern **worker-loop** step 6 documents for losing the *initial* claim race, adapted here to the "lock survived worktree setup" scenario. Both workflows assume the lock is authoritative (reclaim has already fired and removed it by the time this re-check runs), so presence of the original marker is the only proof the claim was not reclaimed.
+
+**Worked example — the check catching a reclaimed lock:**
+
+1. Session A posts its lock comment on issue #100 (`<!-- claude-lock agent=A claimed-at=2026-01-01T00:00:00Z -->`) and starts worktree setup.
+2. Before setup finishes, a concurrent stale-lock-reclaim sweep — running against grace-period math keyed to the original claim timestamp, not to when the sweep itself runs — decides the lock looks stale and removes it: it strips the `agent-claimed` label, clears the assignee, and deletes session A's lock comment.
+3. Session A finishes worktree setup and runs the re-verification query: `gh issue view 100 --json comments --jq '.comments[] | select(.body | contains("claude-lock")) | .body'`. The query returns no results — session A's comment is gone, and no other session has posted a replacement lock yet.
+4. Because the marker it posted is absent from the results, session A treats this as a lost claim per the recovery steps above: it removes the (already-absent) label and assignee defensively, removes the worktree it just created, deletes the branch, and returns to survey instead of dispatching an implementer against a claim it no longer holds.
+
+Contrast with the case where the lock survives: if step 3's query still returns session A's own comment body verbatim, the check passes and dispatch proceeds normally — the query result containing the session's own marker *is* the demonstration that the lock held.
+
 ## 4. The dispatch brief — eight required sections
 
 This is the core of the skill. Every section earned its place by a failure class that occurred when it was omitted. Include all eight; the toolchain and hygiene blocks go in verbatim (placeholders substituted), not summarized — they are "LEARNED FROM RESCUES" and their omission is the most-repeated source of failed pushes.
@@ -214,6 +243,32 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
 1. Run the project's local verification (lint, typecheck, tests for the
    touched packages AND their dependents; include any coverage flags CI
    enforces) and confirm green BEFORE committing the final state.
+   
+   LIVENESS KEEPALIVE (recommended for test suites longer than 30 seconds):
+   If this project has <dashboard-emit-cmd> configured, emit a liveness
+   keepalive event periodically during the test run to signal the worker
+   is still responsive (not stalled/hung). Example:
+   ```bash
+   # Wrap test run with background liveness pings (every 30 seconds)
+   <dashboard-emit-cmd> --source dispatching-subagents --type liveness \
+     --agent "$WORKER_SESSION_ID" \
+     --message "agent online; running pre-push verification for #<N>" &
+   LIVENESS_PID=$!
+   
+   # Run verification (may take minutes for large test suites)
+   <verify-command> && <test-command> && \
+     <lockfile-install-cmd> && <other-checks>
+   VERIFICATION_EXIT=$?
+   
+   kill $LIVENESS_PID 2>/dev/null || true
+   exit $VERIFICATION_EXIT
+   ```
+   
+   Liveness events are filtered from the activity feed (non-substantive by
+   design per issue #508) — they preserve agent liveness status on the
+   dashboard without polluting the activity log. If <dashboard-emit-cmd>
+   is unset, skip this step silently.
+
 2. Commit per <commit-convention>; body ends with `Closes #<N>` (one
    line per bundled issue).
 3. Rebase + `<lockfile-install-cmd>` + push, per the pre-push hygiene block.
@@ -221,17 +276,23 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
      --title "<conventional title>" --body "<structured body with Closes #<N>>" \
      --assignee "$(gh api user --jq .login)"
    Add any labels the project requires at creation time.
-5. Verify the PR landed with the correct assignee and labels:
+5. Post both required gate statuses (ac-compliance-gate and design-qa-gate) for fast
+   "not applicable" propagation to PRs that don't trigger them:
+   tsx scripts/ensure-gate-statuses.ts <PR#> <repo-slug>
+   This call is idempotent and safe even if a gate does apply (it checks applicability
+   and posts the correct status — success/pending/failure — immediately, so waiting on
+   pr-checks watcher ticks is never required).
+6. Verify the PR landed with the correct assignee and labels:
    gh pr view <PR#> --json assignees,labels
    Repair via the REST API if anything is missing — never via `gh pr edit`
    (can exit 0 yet persist nothing).
-6. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
+7. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
    only at the ready-for-review transition. For Design+QA-eligible PRs
    (changed files under `tools/dashboard/public/`), the design-qa-review-gate
    runs first and arms auto-merge post-PASS verdict. For non-dashboard PRs, the
    pr-comments watcher arms auto-merge once all review threads are resolved and
    the PR is flipped to ready-for-review.
-7. Drive the PR to green per the driving-prs-to-merge skill: respond to
+8. Drive the PR to green per the driving-prs-to-merge skill: respond to
    every review thread including <bot-reviewer>'s, fix CI, stay rebased.
 ```
 
@@ -244,7 +305,7 @@ Require the agent to report back, explicitly:
 - PR number and URL.
 - Files modified.
 - Tests added/changed (count and layer), and the `<traceability-scheme>` ID used if applicable.
-- Confirmation that the assignee and required labels are set, and that auto-merge is enabled (state which command was used).
+- Confirmation that the assignee and required labels are set, and that auto-merge is enabled (state which command was used). Also confirm that gate statuses (ac-compliance-gate, design-qa-gate) have been posted via ensure-gate-statuses.ts — even a "not applicable" status unblocks immediately.
 - Final `git status --short` output from the worktree (proves nothing is left uncommitted).
 - Anything that needs operator clarification.
 

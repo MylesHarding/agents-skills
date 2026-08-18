@@ -243,6 +243,32 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
 1. Run the project's local verification (lint, typecheck, tests for the
    touched packages AND their dependents; include any coverage flags CI
    enforces) and confirm green BEFORE committing the final state.
+   
+   LIVENESS KEEPALIVE (recommended for test suites longer than 30 seconds):
+   If this project has <dashboard-emit-cmd> configured, emit a liveness
+   keepalive event periodically during the test run to signal the worker
+   is still responsive (not stalled/hung). Example:
+   ```bash
+   # Wrap test run with background liveness pings (every 30 seconds)
+   <dashboard-emit-cmd> --source dispatching-subagents --type liveness \
+     --agent "$WORKER_SESSION_ID" \
+     --message "agent online; running pre-push verification for #<N>" &
+   LIVENESS_PID=$!
+   
+   # Run verification (may take minutes for large test suites)
+   <verify-command> && <test-command> && \
+     <lockfile-install-cmd> && <other-checks>
+   VERIFICATION_EXIT=$?
+   
+   kill $LIVENESS_PID 2>/dev/null || true
+   exit $VERIFICATION_EXIT
+   ```
+   
+   Liveness events are filtered from the activity feed (non-substantive by
+   design per issue #508) — they preserve agent liveness status on the
+   dashboard without polluting the activity log. If <dashboard-emit-cmd>
+   is unset, skip this step silently.
+
 2. Commit per <commit-convention>; body ends with `Closes #<N>` (one
    line per bundled issue).
 3. Rebase + `<lockfile-install-cmd>` + push, per the pre-push hygiene block.
