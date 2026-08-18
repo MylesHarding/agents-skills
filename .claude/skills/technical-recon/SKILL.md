@@ -140,6 +140,8 @@ A `vetted`, `blocked`, or `complete-recommend-close` line is only emitted once d
 
 Validate the line against what was actually set (`gh issue view <N> --json labels,comments` / `getJiraIssue`) — an agent can report a verdict without performing the mutation (verify-then-trust, per the dispatching-subagents skill).
 
+**Before stopping on `questions=<N>` where N > 1, re-fetch your own posted comments and count them.** A confirmed failure mode: an agent that correctly reasoned through two distinct open questions wrote them both into a single comment instead of two — reactions on one comment can't disambiguate which question they answer (this got worse when both questions happened to reuse the same emoji for different meanings), silently breaking the lead's ability to respond at all. Re-fetching your own comments and confirming the count matches N is the check that catches this before you stop; if a comment ended up carrying more than one question block, split it into separate comments right now, in this same turn — do not report `questions=<N>` and stop while that mismatch exists.
+
 ## Batch fan-out
 
 A lead typically drops several issues at once. Dispatch **one recon agent per issue, in parallel, in a single message** (per the dispatching-subagents skill) — the per-issue sandbox keeps them non-interfering. Run recon on `<recon-model>`, escalating to `opus` for deep or cross-cutting asks. After they return, verify each contract line against the issue, then report one summary table to the lead: id, LoE, confidence, verdict, suggested model/effort, and any splits proposed. Surface the XLs and the blocked/needs-input ones first — those are the lead's decisions to make.
