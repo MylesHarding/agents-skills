@@ -86,6 +86,15 @@ If the session's own lock marker (posted moments earlier) is no longer present i
 
 This mirrors the exact race-loss recovery pattern **worker-loop** step 6 documents for losing the *initial* claim race, adapted here to the "lock survived worktree setup" scenario. Both workflows assume the lock is authoritative (reclaim has already fired and removed it by the time this re-check runs), so presence of the original marker is the only proof the claim was not reclaimed.
 
+**Worked example — the check catching a reclaimed lock:**
+
+1. Session A posts its lock comment on issue #100 (`<!-- claude-lock agent=A claimed-at=2026-01-01T00:00:00Z -->`) and starts worktree setup.
+2. Before setup finishes, a concurrent stale-lock-reclaim sweep — running against grace-period math keyed to the original claim timestamp, not to when the sweep itself runs — decides the lock looks stale and removes it: it strips the `agent-claimed` label, clears the assignee, and deletes session A's lock comment.
+3. Session A finishes worktree setup and runs the re-verification query: `gh issue view 100 --json comments --jq '.comments[] | select(.body | contains("claude-lock")) | .body'`. The query returns no results — session A's comment is gone, and no other session has posted a replacement lock yet.
+4. Because the marker it posted is absent from the results, session A treats this as a lost claim per the recovery steps above: it removes the (already-absent) label and assignee defensively, removes the worktree it just created, deletes the branch, and returns to survey instead of dispatching an implementer against a claim it no longer holds.
+
+Contrast with the case where the lock survives: if step 3's query still returns session A's own comment body verbatim, the check passes and dispatch proceeds normally — the query result containing the session's own marker *is* the demonstration that the lock held.
+
 ## 4. The dispatch brief — eight required sections
 
 This is the core of the skill. Every section earned its place by a failure class that occurred when it was omitted. Include all eight; the toolchain and hygiene blocks go in verbatim (placeholders substituted), not summarized — they are "LEARNED FROM RESCUES" and their omission is the most-repeated source of failed pushes.
