@@ -79,7 +79,10 @@ fi
 # Create a fresh, isolated git worktree for this task. Use --detach to avoid
 # auto-tracking in a multi-task scenario, then check out the branch explicitly.
 git -C "$WORKTREE_BASE" worktree add --detach "$TASK_WORKTREE" "origin/$DEFAULT_BRANCH" --quiet
-git -C "$TASK_WORKTREE" checkout --quiet -b "$BRANCH_NAME"
+
+# Check out the branch, creating it fresh if needed or resetting if it already
+# exists in the repo. This handles idempotence on retry or same-branch re-dispatch.
+git -C "$TASK_WORKTREE" checkout --quiet -B "$BRANCH_NAME" "origin/$DEFAULT_BRANCH"
 
 # Print the full path to the per-task worktree for the orchestrator to use as
 # the dispatch brief's cwd.
