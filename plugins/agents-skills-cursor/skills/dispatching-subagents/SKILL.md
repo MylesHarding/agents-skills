@@ -32,6 +32,7 @@ Every value below is project-specific. The adopting project must define these in
 | Test-layer menu | `<test-layers>` | unit / integration / smoke / E2E |
 | Bot reviewer(s) | `<bot-reviewer>` | the project's automated PR-review bot, if any |
 | Local dashboard event emitter (optional) | `<dashboard-emit-cmd>` | absolute path to a local fleet-monitoring event command, if this project has one configured; absent in most adopting projects — every use below is best-effort and must be skipped silently when unbound |
+| Primary-checkout git lock (optional) | `<checkout-lock-cmd>` | absolute path to a local advisory-lock command guarding the shared primary checkout from concurrent git-mutating commands, if this project has one configured; same optional-binding contract as `<dashboard-emit-cmd>` — skip the acquire/release calls silently when unbound, never a hard failure |
 
 The operator login is never a binding: resolve it at session start with `gh api user --jq .login`. Hardcoded logins in dispatch templates are a documented hazard — a stale login can sit in a template for weeks while a different operator runs the sessions.
 
@@ -94,6 +95,24 @@ cd <worktree-dir>/<descriptive-name>
 ```
 
 Never the primary checkout, never branched from whatever happens to be checked out. Agents that work in the primary checkout collide with the orchestrator and with each other; agents that branch from a stale or wrong base ship diffs full of unrelated changes. The branch name encodes the issue number so PRs, locks, and worktrees are mutually traceable.
+
+**Lock the `git worktree add` step itself, if `<checkout-lock-cmd>` is bound.** This is the one command above that mutates the primary checkout's own state (its worktree list) — concurrent dispatches (multiple worker-loop/orchestrating-slots sessions, or the operator's own interactive git commands) racing on this exact step is a confirmed, repeated real incident on a shared primary checkout. The `fetch` before it and the `cd` after it are not lock-worthy — `fetch` only updates remote-tracking refs, never the working tree. Wrap only the `worktree add` call itself, nothing around it:
+
+```bash
+git -C <repo-root> fetch origin <integration-branch>
+
+until node <checkout-lock-cmd> acquire --holder "$WORKER_SESSION_ID" --purpose "git worktree add for issue #<N>"; do
+  sleep 2
+done
+git -C <repo-root> worktree add \
+  <worktree-dir>/<descriptive-name> \
+  -b <branch-convention> origin/<integration-branch>
+node <checkout-lock-cmd> release --holder "$WORKER_SESSION_ID"
+
+cd <worktree-dir>/<descriptive-name>
+```
+
+A failed acquire (lock held by someone else, not yet stale) must retry with backoff, never proceed with the `worktree add` unsafely — the whole point of the lock is that this exact command is unsafe to run concurrently with another one. `checkout-lock.mjs`'s own stale-lock self-heal (crashed holder, no release) already bounds the worst case, so a short fixed retry sleep is enough; no need for exponential backoff on a lock held for seconds, not minutes. Skip both calls entirely, unconditionally, when `<checkout-lock-cmd>` is unbound — same degrade-gracefully contract as `<dashboard-emit-cmd>`, never a hard failure.
 
 **Symlink caveat (forks/* are primary-checkout-only):** before writing a brief, check whether any in-scope path is a symlink pointing into `forks/` by running `git ls-tree HEAD -- <path>` and looking for mode `120000`. If found, the target is present only in the primary checkout (since `forks/*` is gitignored in most adopting projects and never checked out inside worktrees). Instruct the agent to edit the real file under `forks/<name>/` directly in that checkout — never let it replace the symlink with a real file in the worktree, which silently breaks the fork bridge. See `docs/vendor-forks.md` for the full context on fork bridges.
 
