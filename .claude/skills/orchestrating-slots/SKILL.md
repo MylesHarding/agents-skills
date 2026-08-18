@@ -111,6 +111,12 @@ Poll with `gh pr view <N> --json mergeStateStatus,autoMergeRequest`. Each state 
 
 Sub-agents truncate at the final push/PR-open step, drop mandated flags, and occasionally misreport success. The orchestrator owns final verification — on **every** agent completion, before counting the slot's work as done:
 
+0. **Post gate statuses unconditionally** — immediately after confirming the PR exists, run the backstop that ensures both required gate contexts (ac-compliance-gate and design-qa-gate) are posted:
+   ```bash
+   tsx scripts/ensure-gate-statuses.ts <PR#> <repo-slug>
+   ```
+   This is the defensive layer that guarantees "not applicable" statuses post immediately, before the conditional gate skills below do their scoped work. If the implementing agent's own dispatch truncated before reaching step 5, this catches the miss.
+
 1. **PR exists and is open** — `gh pr view <N> --json state,assignees,labels,autoMergeRequest`.
 2. **Assignee is `$ME`** — in real use ~25% of agents dropped `--assignee` even when the brief bolded it; re-add via API (works even post-merge). Assignee-scoped slot math and rescue scoping silently break without it.
 3. **Required labels present; auto-merge armed** — apply/re-issue if dropped.
