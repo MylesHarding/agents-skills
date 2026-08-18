@@ -107,10 +107,12 @@ done
 git -C <repo-root> worktree add \
   <worktree-dir>/<descriptive-name> \
   -b <branch-convention> origin/<integration-branch>
-node <checkout-lock-cmd> release --holder "$WORKER_SESSION_ID" --worktree "<worktree-dir>/<descriptive-name>"
+node <checkout-lock-cmd> release --holder "$WORKER_SESSION_ID"
 
 cd <worktree-dir>/<descriptive-name>
 ```
+
+**Ownership lifecycle note:** the `acquire` call creates a per-worktree ownership record that persists beyond this brief `release` — the record's lifetime spans the entire implementation session. It is torn down separately by pr-cleanup (see that skill's step 4) when the worktree is discarded, not here.
 
 A failed acquire (lock held by someone else, not yet stale) must retry with backoff, never proceed with the `worktree add` unsafely — the whole point of the lock is that this exact command is unsafe to run concurrently with another one. `checkout-lock.mjs`'s own stale-lock self-heal (crashed holder, no release) already bounds the worst case, so a short fixed retry sleep is enough; no need for exponential backoff on a lock held for seconds, not minutes. Skip both calls entirely, unconditionally, when `<checkout-lock-cmd>` is unbound — same degrade-gracefully contract as `<dashboard-emit-cmd>`, never a hard failure.
 
