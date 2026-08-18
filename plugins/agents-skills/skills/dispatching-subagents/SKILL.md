@@ -243,6 +243,32 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
 1. Run the project's local verification (lint, typecheck, tests for the
    touched packages AND their dependents; include any coverage flags CI
    enforces) and confirm green BEFORE committing the final state.
+   
+   LIVENESS KEEPALIVE (recommended for test suites longer than 30 seconds):
+   If this project has <dashboard-emit-cmd> configured, emit a liveness
+   keepalive event periodically during the test run to signal the worker
+   is still responsive (not stalled/hung). Example:
+   ```bash
+   # Wrap test run with background liveness pings (every 30 seconds)
+   <dashboard-emit-cmd> --source dispatching-subagents --type liveness \
+     --agent "$WORKER_SESSION_ID" \
+     --message "agent online; running pre-push verification for #<N>" &
+   LIVENESS_PID=$!
+   
+   # Run verification (may take minutes for large test suites)
+   <verify-command> && <test-command> && \
+     <lockfile-install-cmd> && <other-checks>
+   VERIFICATION_EXIT=$?
+   
+   kill $LIVENESS_PID 2>/dev/null || true
+   exit $VERIFICATION_EXIT
+   ```
+   
+   Liveness events are filtered from the activity feed (non-substantive by
+   design per issue #508) — they preserve agent liveness status on the
+   dashboard without polluting the activity log. If <dashboard-emit-cmd>
+   is unset, skip this step silently.
+
 2. Commit per <commit-convention>; body ends with `Closes #<N>` (one
    line per bundled issue).
 3. Rebase + `<lockfile-install-cmd>` + push, per the pre-push hygiene block.
@@ -250,17 +276,23 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
      --title "<conventional title>" --body "<structured body with Closes #<N>>" \
      --assignee "$(gh api user --jq .login)"
    Add any labels the project requires at creation time.
-5. Verify the PR landed with the correct assignee and labels:
+5. Post both required gate statuses (ac-compliance-gate and design-qa-gate) for fast
+   "not applicable" propagation to PRs that don't trigger them:
+   tsx scripts/ensure-gate-statuses.ts <PR#> <repo-slug>
+   This call is idempotent and safe even if a gate does apply (it checks applicability
+   and posts the correct status — success/pending/failure — immediately, so waiting on
+   pr-checks watcher ticks is never required).
+6. Verify the PR landed with the correct assignee and labels:
    gh pr view <PR#> --json assignees,labels
    Repair via the REST API if anything is missing — never via `gh pr edit`
    (can exit 0 yet persist nothing).
-6. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
+7. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
    only at the ready-for-review transition. For Design+QA-eligible PRs
    (changed files under `tools/dashboard/public/`), the design-qa-review-gate
    runs first and arms auto-merge post-PASS verdict. For non-dashboard PRs, the
    pr-comments watcher arms auto-merge once all review threads are resolved and
    the PR is flipped to ready-for-review.
-7. Drive the PR to green per the driving-prs-to-merge skill: respond to
+8. Drive the PR to green per the driving-prs-to-merge skill: respond to
    every review thread including <bot-reviewer>'s, fix CI, stay rebased.
 ```
 
@@ -273,7 +305,7 @@ Require the agent to report back, explicitly:
 - PR number and URL.
 - Files modified.
 - Tests added/changed (count and layer), and the `<traceability-scheme>` ID used if applicable.
-- Confirmation that the assignee and required labels are set, and that auto-merge is enabled (state which command was used).
+- Confirmation that the assignee and required labels are set, and that auto-merge is enabled (state which command was used). Also confirm that gate statuses (ac-compliance-gate, design-qa-gate) have been posted via ensure-gate-statuses.ts — even a "not applicable" status unblocks immediately.
 - Final `git status --short` output from the worktree (proves nothing is left uncommitted).
 - Anything that needs operator clarification.
 
