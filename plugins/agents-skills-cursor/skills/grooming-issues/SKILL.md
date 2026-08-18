@@ -90,6 +90,8 @@ GROOM-ERROR: <message>
 
 Validate against what was actually written (`gh issue view <N>` / `getJiraIssue`): the body changed, existing AC is byte-identical unless `ac=operator-edited`, and the state moved.
 
+**Before reporting `questions=<N>` where N > 1, re-fetch your own posted comments and count them.** A confirmed failure mode: two distinct open questions landed in a single comment instead of two separate ones — reactions on one comment can't disambiguate which question they answer (worse when both questions happened to reuse the same emoji for different meanings), silently breaking the lead's ability to respond. If the count doesn't match N, split the offending comment into separate ones now, in this same turn, before stopping.
+
 ## Anti-patterns
 
 - **Rewriting approved acceptance criteria** because it "reads better" — the headline failure this skill exists to prevent.
