@@ -101,6 +101,8 @@ create_label "ready-to-dispatch" "0e8a16" \
   "Advisory: groomed and dispatchable. NOT authoritative — re-verify assignees are empty before locking"
 create_label "investigation" "a371f7" \
   "This issue is an investigation/research task; recon produces research plan instead of LoE"
+create_label "blocked" "b60205" \
+  "Technical recon: a dependency issue/PR/infra must land first before this can be sized further"
 
 echo
 echo "Done. Taxonomy bootstrapped with models: ${MODELS[*]} (workhorse: ${WORKHORSE})."
