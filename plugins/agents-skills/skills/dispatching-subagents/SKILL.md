@@ -101,13 +101,13 @@ Never the primary checkout, never branched from whatever happens to be checked o
 ```bash
 git -C <repo-root> fetch origin <integration-branch>
 
-until node <checkout-lock-cmd> acquire --holder "$WORKER_SESSION_ID" --purpose "git worktree add for issue #<N>"; do
+until node <checkout-lock-cmd> acquire --holder "$WORKER_SESSION_ID" --purpose "git worktree add for issue #<N>" --worktree "<worktree-dir>/<descriptive-name>"; do
   sleep 2
 done
 git -C <repo-root> worktree add \
   <worktree-dir>/<descriptive-name> \
   -b <branch-convention> origin/<integration-branch>
-node <checkout-lock-cmd> release --holder "$WORKER_SESSION_ID"
+node <checkout-lock-cmd> release --holder "$WORKER_SESSION_ID" --worktree "<worktree-dir>/<descriptive-name>"
 
 cd <worktree-dir>/<descriptive-name>
 ```

@@ -52,8 +52,17 @@ Checklist to run before treating a fix as finished, not just "matches the report
 ## Clean-code principles, applied at the moment of writing
 
 - **DRY** — before adding a new function or component, search for one that already does the
-  job. A third near-identical copy of the same logic is a sign to extract a shared helper,
-  not write a third copy.
+  job. **The third near-identical copy is the one that has to stop and extract, not the one
+  that gets to be "just this once too."** Two similar things can be coincidence; a third
+  proves it's a pattern, and you're the agent who just confirmed that by writing it — the
+  extraction belongs in *this* change, not a someday-refactor filed for later. Confirmed
+  costly in practice: six independent real-time-channel listener modules each reimplementing
+  the same client-construction and reconnection boilerplate, four near-identical dispatch
+  wrapper functions differing only in one string argument, and a scattered constant read
+  independently in three files — none individually wrong when it was added, each one added
+  by a different narrowly-scoped change that had no visibility into the other two/three/five
+  already sitting in the codebase. Before writing new code that resembles something you've
+  now seen twice already, grep for it — don't rely on remembering you saw it.
 - **KISS** — pick the simplest design that satisfies the actual requirement in front of you.
   No speculative configuration options, no extra abstraction layer justified by "might need
   it later."
