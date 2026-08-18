@@ -32,6 +32,7 @@ Every value below is project-specific. The adopting project must define these in
 | Test-layer menu | `<test-layers>` | unit / integration / smoke / E2E |
 | Bot reviewer(s) | `<bot-reviewer>` | the project's automated PR-review bot, if any |
 | Local dashboard event emitter (optional) | `<dashboard-emit-cmd>` | absolute path to a local fleet-monitoring event command, if this project has one configured; absent in most adopting projects — every use below is best-effort and must be skipped silently when unbound |
+| Primary-checkout git lock (optional) | `<checkout-lock-cmd>` | absolute path to a local advisory-lock command guarding the shared primary checkout from concurrent git-mutating commands, if this project has one configured; same optional-binding contract as `<dashboard-emit-cmd>` — skip the acquire/release calls silently when unbound, never a hard failure |
 
 The operator login is never a binding: resolve it at session start with `gh api user --jq .login`. Hardcoded logins in dispatch templates are a documented hazard — a stale login can sit in a template for weeks while a different operator runs the sessions.
 
@@ -94,6 +95,24 @@ cd <worktree-dir>/<descriptive-name>
 ```
 
 Never the primary checkout, never branched from whatever happens to be checked out. Agents that work in the primary checkout collide with the orchestrator and with each other; agents that branch from a stale or wrong base ship diffs full of unrelated changes. The branch name encodes the issue number so PRs, locks, and worktrees are mutually traceable.
+
+**Lock the `git worktree add` step itself, if `<checkout-lock-cmd>` is bound.** This is the one command above that mutates the primary checkout's own state (its worktree list) — concurrent dispatches (multiple worker-loop/orchestrating-slots sessions, or the operator's own interactive git commands) racing on this exact step is a confirmed, repeated real incident on a shared primary checkout. The `fetch` before it and the `cd` after it are not lock-worthy — `fetch` only updates remote-tracking refs, never the working tree. Wrap only the `worktree add` call itself, nothing around it:
+
+```bash
+git -C <repo-root> fetch origin <integration-branch>
+
+until node <checkout-lock-cmd> acquire --holder "$WORKER_SESSION_ID" --purpose "git worktree add for issue #<N>" --worktree "<worktree-dir>/<descriptive-name>"; do
+  sleep 2
+done
+git -C <repo-root> worktree add \
+  <worktree-dir>/<descriptive-name> \
+  -b <branch-convention> origin/<integration-branch>
+node <checkout-lock-cmd> release --holder "$WORKER_SESSION_ID" --worktree "<worktree-dir>/<descriptive-name>"
+
+cd <worktree-dir>/<descriptive-name>
+```
+
+A failed acquire (lock held by someone else, not yet stale) must retry with backoff, never proceed with the `worktree add` unsafely — the whole point of the lock is that this exact command is unsafe to run concurrently with another one. `checkout-lock.mjs`'s own stale-lock self-heal (crashed holder, no release) already bounds the worst case, so a short fixed retry sleep is enough; no need for exponential backoff on a lock held for seconds, not minutes. Skip both calls entirely, unconditionally, when `<checkout-lock-cmd>` is unbound — same degrade-gracefully contract as `<dashboard-emit-cmd>`, never a hard failure.
 
 **Symlink caveat (forks/* are primary-checkout-only):** before writing a brief, check whether any in-scope path is a symlink pointing into `forks/` by running `git ls-tree HEAD -- <path>` and looking for mode `120000`. If found, the target is present only in the primary checkout (since `forks/*` is gitignored in most adopting projects and never checked out inside worktrees). Instruct the agent to edit the real file under `forks/<name>/` directly in that checkout — never let it replace the symlink with a real file in the worktree, which silently breaks the fork bridge. See `docs/vendor-forks.md` for the full context on fork bridges.
 
@@ -181,7 +200,7 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
 2. Commit per <commit-convention>; body ends with `Closes #<N>` (one
    line per bundled issue).
 3. Rebase + `<lockfile-install-cmd>` + push, per the pre-push hygiene block.
-4. gh pr create --base <integration-branch> --head <branch> \
+4. gh pr create --base <integration-branch> --head <branch> --draft \
      --title "<conventional title>" --body "<structured body with Closes #<N>>" \
      --assignee "$(gh api user --jq .login)"
    Add any labels the project requires at creation time.
@@ -189,23 +208,12 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
    gh pr view <PR#> --json assignees,labels
    Repair via the REST API if anything is missing — never via `gh pr edit`
    (can exit 0 yet persist nothing).
-6. Enable auto-merge immediately, UNLESS the PR qualifies for Design+QA review:
-   **Carve-out:** If the PR's changed files include anything under
-   `tools/dashboard/public/`, do NOT arm auto-merge yet. The orchestrator's
-   Design+QA review gate must run first (worker-loop step 8), and the gate
-   itself will arm auto-merge only after both reviewers pass. This prevents
-   auto-merge from firing before fresh-context reviewers can render and judge
-   the UI.
-   ```bash
-   # Check if this PR requires the design-qa gate
-   if gh pr view <N> --json files --jq '[.files[].path] | any(startswith("tools/dashboard/public/"))' | grep -q true; then
-     # Skip auto-merge; gate will arm it after PASS verdict
-     echo "PR qualifies for design-qa gate review; auto-merge will be armed post-review"
-   else
-     # Safe to arm now
-     <auto-merge-cmd>
-   fi
-   ```
+6. Do NOT arm auto-merge at PR creation — PRs open in draft and auto-merge arms
+   only at the ready-for-review transition. For Design+QA-eligible PRs
+   (changed files under `tools/dashboard/public/`), the design-qa-review-gate
+   runs first and arms auto-merge post-PASS verdict. For non-dashboard PRs, the
+   pr-comments watcher arms auto-merge once all review threads are resolved and
+   the PR is flipped to ready-for-review.
 7. Drive the PR to green per the driving-prs-to-merge skill: respond to
    every review thread including <bot-reviewer>'s, fix CI, stay rebased.
 ```

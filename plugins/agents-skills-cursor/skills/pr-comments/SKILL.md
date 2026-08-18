@@ -57,17 +57,37 @@ You do NOT touch: dispatching new issues (the dispatch lane — see `dispatching
 3. **Resolve the thread ONLY after the fix is pushed** (or the counter is posted and stands). Order is strict: push first, confirm pushed (`git log origin/<branch>..HEAD` is empty), then resolve. Never resolve a thread whose fix is still local/uncommitted — that merges pre-fix code under falsely-resolved threads.
 4. Also read the **PR body summary**, not just threads — some bots put their full priority list / security findings only there, and the body does not gate merge (see the async-orphan / threads-are-a-subset traps in `driving-prs-to-merge`).
 
-## The arm/disarm gate (the race fix)
+## The arm/disarm gate (the ready-for-review transition)
 
-Enable auto-merge only when **BOTH** hold:
+PRs open in draft and transition to ready-for-review only when ALL of the following hold:
 
-- **The review bot has actually reviewed the PR** — it posted its review / comments or an explicit no-issues verdict. If `<bot-reviewer>` has NOT yet reacted (no `<bot-ack-reaction>`, no comments, no review), do **NOT** arm — wait for it. Arming before the bot reviews is exactly the race being killed: comments arriving after the PR is queued.
-  - **Timeout escape:** if a small fixed grace window (≈5 min) has elapsed since PR-open (or since the last push that would re-trigger review) AND the bot still shows no reaction, assume it is not coming and **arm anyway**. Do not wait indefinitely on a bot that never reacts.
+- **The review bot has actually reviewed the PR** (if applicable to this PR type) — it posted its review / comments or an explicit no-issues verdict. If `<bot-reviewer>` has NOT yet reacted (no `<bot-ack-reaction>`, no comments, no review), do **NOT** flip to ready-for-review — wait for it.
+  - **Timeout escape:** if a small fixed grace window (≈5 min) has elapsed since PR-open (or since the last push that would re-trigger review) AND the bot still shows no reaction, assume it is not coming and **proceed anyway**.
 - **All review threads are resolved** (bot + human), no open requested-changes.
+- **Design-QA gate has passed** (if this PR touches `tools/dashboard/public/`, the design-qa-review-gate gate must have posted its PASS verdict; otherwise, this criterion does not apply).
 
-When both true: `gh pr merge <PR#> --auto <merge-strategy>` (merge queue active → omit the strategy flag, or the queue silently drops enrollment — see `driving-prs-to-merge`).
+When all true:
+```bash
+gh pr ready <PR#>
+<auto-merge-cmd>
+```
+This flips the PR from draft to ready-for-review and arms auto-merge in one logical step. The PR can then merge when the queue clears.
 
-**After arming, keep watching the PR.** A late bot/human comment can still land once the PR is already queued — the original race. Do NOT assume the queue holds for a new unresolved thread. If a fresh thread appears on an armed PR: `gh pr merge <PR#> --disable-auto` first, then fix → push → resolve → re-arm per this gate.
+**Keep watching after ready-for-review.** A late bot/human comment can still land once the PR is queued — the original race. Do NOT assume the queue holds for a new unresolved thread. If a fresh thread appears on a ready-for-review PR: `gh pr merge <PR#> --disable-auto` first, flip back to draft with `gh pr convert-to-draft <PR#>`, then fix → push → resolve → return to ready-for-review per this gate.
+
+## Draft-state and revision cycles
+
+When a PR is blocked in draft due to adversarial feedback (design-qa gate REQUEST_CHANGES or unresolved review threads):
+
+1. **Track revision cycles** — store a revision-cycle count in a comment marker (`<!-- squad-revision-cycle: n=<N> -->`). Increment it each time a CHANGES_REQUESTED verdict (design-qa or human reviewer) arrives on a PR already in draft.
+
+2. **Hit the revision-cap limit** — default cap is **2 revision cycles**. Once a PR has received 2 rounds of adversarial feedback, stop iterating directly on that PR.
+
+3. **Split disposition on cap-hit:**
+   - **Genuine merge-blockers** (marked with keywords like "BLOCKER" or "MUST FIX") → stay on the PR and continue blocking it.
+   - **Enhancements / nice-to-haves** (marked with keywords like "COULD", "NICE-TO-HAVE", or operator-added `enhancement` label) → file a **new GitHub issue** referencing the PR with the specific feedback. Dispatch implementation against that new issue to avoid holding up the primary PR indefinitely.
+
+This prevents infinite iteration while preserving blocker correctness.
 
 Never post `<ai-mention-trigger>` from any agent — it is a human-only trigger; one AI session invoking another creates unsupervised loops. Enforce with a permission deny rule matching the mention string.
 
