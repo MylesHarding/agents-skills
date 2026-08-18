@@ -132,6 +132,31 @@ with these substitutions:
   same-repo `#N`, as long as the account opening the PR can also close issues
   on the meta repo.
 
+## Cross-repo PRs: tracking multiple PRs on one issue
+
+When a registry-dispatch dispatch opens a companion PR in **another repo** (not the
+meta repo), the originating tracker issue must track ALL PRs across all repos it
+spawned. The dispatching agent or orchestrator must post or update a checklist on
+the originating issue:
+
+```markdown
+## Cross-repo PRs
+- [ ] ntsy-forge#<N> (this repo)
+- [ ] agents-skills#<M>
+```
+
+Each line represents one PR in a different repo. Check off each line as that PR merges.
+This checklist lives on the originating tracker issue (the meta repo), not split across
+multiple repos — it is the at-a-glance record that more than one PR needs attention.
+
+See `gh-issue-locking/SKILL.md` and `jira-issue-locking/SKILL.md`'s close-on-merge
+sections: before closing an issue, those gates check for this checklist and verify
+(via live `gh pr view` or equivalent) that EVERY listed PR is actually `MERGED` before
+proceeding. If any listed PR is still open, close-on-merge is withheld — the issue stays
+open, the checklist is updated to reflect current state, and a note names which PR(s)
+are still outstanding. This prevents the tracking issue from appearing "done" while
+real work is still in flight (the scenario issues #555 and #570 encountered).
+
 ## Close-on-merge and reconciliation implications
 
 orchestrating-slots' close-on-merge step and PR-state polling (`gh pr view`,
