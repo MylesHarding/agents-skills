@@ -193,6 +193,8 @@ GIT DISCIPLINE:
 - Stay inside your worktree for the entire task.
 ```
 
+**Worktree isolation is now enforced mechanically:** issue #489 added a pre-commit hook that rejects any attempt to commit to the integration branch (`main`) from the primary checkout. This means the prompt instruction above is backed by an automatic safeguard — if you accidentally issue `git commit` from the wrong location, the hook will catch it immediately with a helpful error message, not silently let the stray commit land in the primary checkout's history.
+
 Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" unexpected state can silently destroy prior commits; recovery then needs `git fsck --unreachable`. Cheaper to ban the command than to fish objects out of the GC.
 
 ### (g) Verification and PR procedure
