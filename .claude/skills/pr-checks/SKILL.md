@@ -108,7 +108,7 @@ For a real merge_group failure:
    ```
 2. Head checks green AND **all review threads resolved** (never re-arm a PR with open bot/human threads — that gate is the `pr-comments` lane's).
 3. Not currently in the queue, no live auto-merge.
-   Then: `gh pr merge <PR#> --auto` (NO `--squash`/strategy flag — a merge queue REJECTS it and silently drops enrollment).
+   Then: `gh pr merge <PR#> --auto --delete-branch` (NO `--squash`/strategy flag — a merge queue REJECTS it and silently drops enrollment; `--delete-branch` is not a strategy flag and is safe to keep — see `driving-prs-to-merge`'s own note on always including it).
 
 A PR with **zero** merge_group history is *never-armed*, not ejected → leave it to the `pr-comments` lane's initial arm-after-review; do not touch it. This rule is the **re-arm-after-ejection** case only.
 
