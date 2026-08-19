@@ -59,7 +59,7 @@ gh pr create --base <integration-branch> --title "<conventional title>" \
   --body "<... Closes #N ...>" \
   --assignee "$(gh api user --jq .login)"
 gh pr view <PR#> --json assignees,labels   # verify assignee landed
-gh pr merge <PR#> --auto <merge-strategy>   # merge queue active? OMIT the strategy flag — see below
+gh pr merge <PR#> --auto <merge-strategy> --delete-branch   # merge queue active? OMIT the strategy flag — see below
 ```
 
 If the assignee or required labels did not land, repair via the REST API:
@@ -76,8 +76,9 @@ Why each step:
 - **Self-assignment at creation** is the scoping mechanism when multiple operators/agents run concurrently: `gh pr list --assignee @me` is how each operator filters their in-flight work. Author is automatic; assignee is what the filter reads. (See the issue-locking skill (**gh-issue-locking** / **jira-issue-locking**) for the full multi-operator protocol.)
 - **Auto-merge at open** means the PR merges the moment gates clear, with no babysitting.
 - **Merge-queue caveat (battle-tested):** when a merge queue manages `<integration-branch>`, `gh pr merge --auto --squash` is *rejected by the queue and the auto-merge enrollment silently drops* — no error appears on the PR; it just never merges. Pass `--auto` with no strategy flag. This was the root cause of auto-merge "mysteriously dropping" across many PRs in practice.
-- **Re-issue rule:** if auto-merge enrollment is rejected at open (e.g. a review requirement not yet satisfiable), it does NOT queue itself for later. Note it in the PR body and explicitly re-run `gh pr merge <PR#> --auto` once the blocker clears, or the green PR sits unmerged indefinitely. The command is idempotent — "already queued to merge" is confirmation, not an error.
+- **Re-issue rule:** if auto-merge enrollment is rejected at open (e.g. a review requirement not yet satisfiable), it does NOT queue itself for later. Note it in the PR body and explicitly re-run `gh pr merge <PR#> --auto --delete-branch` once the blocker clears, or the green PR sits unmerged indefinitely. The command is idempotent — "already queued to merge" is confirmation, not an error.
 - Never `--admin` past checks or required reviews — the sanctioned alternatives are `<breaking-change-labels>` or an honest stop-and-report (see "Meta-gates").
+- **Always include `--delete-branch`, on every arm and every re-arm.** The flag only takes effect on the merge that actually sticks — a `deleteBranchOnMerge`-disabled repo (the common case; this is a repo *setting*, not a default) leaves the branch on the remote forever otherwise, even though the merge itself succeeded and the PR looks fully done. Observed live: a repo where every OTHER recent merge cleaned up correctly still left exactly one stray branch behind, from the one arm call that happened to omit the flag — the omission is invisible until someone goes looking at `git ls-remote --heads origin`, since the PR itself shows no sign anything is wrong.
 
 ## Stuck-PR triage query
 
@@ -233,8 +234,8 @@ After resolving locally, always re-run `<local-gate>` against the merged result 
 ## Merge-queue operations
 
 - A PR's own head CI being green proves nothing about queue success: the queue re-runs the full suite on a synthetic `gh-readonly-queue/<integration-branch>/pr-<N>` branch (base + queued entries). **Diagnose boots from those merge-group runs, not the PR's checks.** Any flaky merge-gating test boots whatever shares the queue group.
-- Pushing to a branch already in the queue is rejected (GH006 "Branches that are queued for merging cannot be updated"), and `gh pr merge --disable-auto` does NOT dequeue. Recovery: GraphQL `dequeuePullRequest(input:{id:<pr-node-id>})` → push → re-arm `gh pr merge --auto`. A wedged queue (queued 30–40 min, branch locked, no merge-group run ever starts) needs dequeue → `gh pr update-branch` → re-arm.
-- A transient hitting a merge_group run **ejects the PR AND clears auto-merge** — the PR then sits CLEAN-looking but unqueued forever. Re-arm `gh pr merge --auto` after every ejection.
+- Pushing to a branch already in the queue is rejected (GH006 "Branches that are queued for merging cannot be updated"), and `gh pr merge --disable-auto` does NOT dequeue. Recovery: GraphQL `dequeuePullRequest(input:{id:<pr-node-id>})` → push → re-arm `gh pr merge --auto --delete-branch`. A wedged queue (queued 30–40 min, branch locked, no merge-group run ever starts) needs dequeue → `gh pr update-branch` → re-arm.
+- A transient hitting a merge_group run **ejects the PR AND clears auto-merge** — the PR then sits CLEAN-looking but unqueued forever. Re-arm `gh pr merge --auto --delete-branch` after every ejection.
 
 ## Stuck-PR triage order
 
@@ -254,7 +255,7 @@ git rebase origin/<integration-branch>        # parent's commits already in base
 git push --force-with-lease origin <branch>
 gh pr edit <PR#> --base <integration-branch>  # GitHub may have retargeted automatically — check first
 gh pr ready <PR#>
-gh pr merge <PR#> --auto <merge-strategy>     # engage auto-merge NOW (queue → no strategy flag)
+gh pr merge <PR#> --auto <merge-strategy> --delete-branch     # engage auto-merge NOW (queue → no strategy flag)
 ```
 
 ## Pre-existing red CI: finder owns it
