@@ -61,6 +61,11 @@ else
   git -C "$WORKTREE_BASE" fetch origin "$DEFAULT_BRANCH" --quiet
 fi
 
+# Resolve WORKTREE_BASE to an absolute path to avoid relative-path ambiguity
+# when passed to `git -C` commands below. This fixes double-nesting when
+# worktree_base is relative (the common case).
+WORKTREE_BASE="$(cd "$WORKTREE_BASE" && pwd)"
+
 # Create a per-task worktree directory inside worktree_base to hold all
 # task-specific worktrees. Use a fixed name so cleanup is straightforward.
 WORKTREE_POOL="$WORKTREE_BASE/.worktrees"
