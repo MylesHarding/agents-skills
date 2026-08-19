@@ -125,7 +125,7 @@ When an issue carries the `investigation` label, technical-recon does the resear
 
 1. Read the issue's stated questions and scope.
 2. Investigate directly: trace the actual code, read the relevant docs, check existing precedent/prior art already in the repo — same evidence standard as any other recon pass (`file:line` citations, not assertions).
-3. Post the findings as a real, evidence-grounded answer to each question — a research *conclusion*, not a plan for someone else to follow.
+3. Post the findings as a real, evidence-grounded answer to each question — a research *conclusion*, not a plan for someone else to follow. **Before closing, explicitly enumerate every finding by category** (e.g. safe-to-build / needs-vetting / deferred / rejected) — each category must route to either a tracked follow-up issue (filed and cross-linked) or a logged non-issue decision with a one-line reason. No uncategorized findings may be left unrouted.
 4. Route the conclusion to one of two outputs, per what the research actually produced — never leave both undone:
    - **New knowledge, nothing to build:** close the issue with the findings comment as the permanent, citable research record.
    - **A concrete build ask:** file one or more follow-up issues carrying the vetted approach the research produced (cross-link both directions — the new issue references this one; a comment here links to the new issue's number) and close this one. The spike issue IS the cataloged research record; the follow-up issue is what actually gets implemented — never bundle both into a single ticket.
@@ -142,7 +142,7 @@ Recon ends by moving the issue to exactly one state via the control-field skill:
 | **needs-spec-input** | A specific technical decision cleared the escalation bar (irreversible/costly, or genuinely no precedent to decide from) and is pending the lead's answer | `<needs-input-state>` + the questions / `**Decision needed**` comment; NOT `<vetted-state>`. The lead answers in the issue and reruns to continue. |
 | **blocked** | A dependency issue/PR/infra must land first | `<blocked-state>` + the dependency named in the comment |
 | **complete-recommend-close** | The issue describes work that is already complete per the current acceptance criteria — nothing remains to build, dispatch, or spec. Recon confirms this with high confidence. | Issue closed via `gh issue close <number> --reason completed`. A findings comment explains the conclusion and links back to evidence (merged PR, completed work, or acceptance criteria met). This is terminal; rerun requests on closed issues are no-ops. |
-| **investigation-concluded** | An `investigation`-labeled issue whose research was resolvable directly (the default path above) — findings posted and either (a) nothing to build, or (b) a follow-up build issue filed and cross-linked. | Issue closed via `gh issue close <number> --reason completed`. Terminal, same as `complete-recommend-close`. |
+| **investigation-concluded** | An `investigation`-labeled issue whose research was resolvable directly (the default path above) — findings posted and per each distinct finding category (safe-to-build / needs-vetting / deferred / rejected), either a follow-up build issue filed and cross-linked OR an explicit logged non-issue decision with a one-line reason. No uncategorized findings may close. | Issue closed via `gh issue close <number> --reason completed`. Terminal, same as `complete-recommend-close`. |
 | **investigation-needs-human** | An `investigation`-labeled issue whose research genuinely requires something this agent can't do in its own turn (the escape hatch above). | `<needs-input-state>` + the research-plan comment (Questions to answer / Investigation approach / Rough time-box / Risks / Findings placeholder) + an explicit note on why direct resolution wasn't possible. NOT terminal — a human conducts the research and posts findings to close it themselves. |
 
 `<vetted-state>` here means dev-vetted, not merely groomed — the orchestrator's dispatch filter can now trust it. (If your project's `<vetted-state>` is the same `ready-to-dispatch` the intake recon uses, technical recon is what earns it for non-trivial work; treat a `ready-to-dispatch` with no recon comment and a non-trivial ask as not-yet-vetted.)
@@ -155,7 +155,8 @@ Each recon agent ends with exactly one line:
 TECH-RECON <id>: loe=<XS|S|M|L|XL> confidence=<low|med|high> verdict=<vetted|blocked> assumptions=<N>[ split=<N>][ model:<tier>][ effort:<level>][ deps=<ref,...>]
 TECH-RECON <id>: verdict=needs-spec-input questions=<N> (awaiting the lead's answers; rerun to continue)
 TECH-RECON <id>: verdict=complete-recommend-close confidence=<med|high> (issue already complete, closed via gh issue close)
-TECH-RECON <id>: verdict=investigation-concluded (findings posted, closed via gh issue close[, follow-up=<ref>])
+TECH-RECON <id>: verdict=investigation-concluded (findings posted, closed via gh issue close[, follow-up=[<ref[,<ref>...]>]|none])  
+   Follow-up refs: `[#676]` (one), `[#676,#680]` (many), or `none (all findings resolved inline)` — count per-category routing decisions for orchestrator validation.
 TECH-RECON <id>: verdict=investigation-needs-human questions=<N> (research needs human-only access; rerun to continue)
 TECH-RECON-ERROR: <message>
 ```
