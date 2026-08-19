@@ -279,7 +279,10 @@ Why the reset ban: a confused agent that runs `git reset --hard` to "clean up" u
 5. Post both required gate statuses (ac-compliance-gate and design-qa-gate) for fast
    "not applicable" propagation to PRs that don't trigger them:
    tsx scripts/ensure-gate-statuses.ts <PR#> <repo-slug>
-   This call is idempotent and safe even if a gate does apply (it checks applicability
+   `<repo-slug>` is mandatory — fill it with the target repo's owner/repo slug
+   (for registry-dispatch briefs, use the target repo slug from the registry entry,
+   not the meta repo; for single-repo dispatches, use the repo's own slug). This
+   call is idempotent and safe even if a gate does apply (it checks applicability
    and posts the correct status — success/pending/failure — immediately, so waiting on
    pr-checks watcher ticks is never required).
 6. Verify the PR landed with the correct assignee and labels:

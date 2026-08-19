@@ -142,6 +142,17 @@ with these substitutions:
   GitHub resolves `owner/repo#N` cross-repo closing keywords the same way as
   same-repo `#N`, as long as the account opening the PR can also close issues
   on the meta repo.
+- **Gate-status posting (step 5)**: fill dispatching-subagents' `<repo-slug>`
+  binding with the target repo's slug (the registry entry's `owner/repo`, from
+  `github_url`), not the meta repo:
+
+  ```
+  tsx scripts/ensure-gate-statuses.ts <PR#> <target-repo-slug>
+  ```
+
+  This posts gate statuses on the PR in its own repo (e.g. squad#5 in
+  MylesHarding/squad), not the meta repo. The meta-repo issue still auto-closes
+  via the `Closes <meta-repo-slug>#<N>` keyword already in the PR body.
 
 ## Cross-repo PRs: tracking multiple PRs on one issue
 
