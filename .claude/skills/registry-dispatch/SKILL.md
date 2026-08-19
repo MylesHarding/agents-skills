@@ -49,6 +49,17 @@ Extends the gh-issue-labels taxonomy with one more entry:
   filter (see gh-issue-labels) until the label is fixed or the registry is
   updated. Never guess the intended repo.
 
+**Recognizing a target-repo finding before an issue even exists.** Any agent doing
+review, audit, or read-only investigation work — not just the orchestrator selecting
+issues to dispatch — can surface a real finding whose evidence lives under a registry
+entry's `worktree_base` rather than in the meta repo's own code. Fixing it in place, or
+noting it somewhere without filing it, both leave the finding with no path to a fix (the
+target repo isn't polled by anything watching the meta repo's backlog). File a GitHub
+issue on the **meta repo** with the matching `repo:<name>` label instead, so this skill's
+normal resolution/dispatch flow picks it up — the finding needs a tracked issue exactly
+as much as any other target-repo work, whether or not an agent happens to also be in the
+middle of an orchestrator role that session.
+
 ## Resolution step (before lock, before dispatch)
 
 Run once per candidate issue, after the normal gh-issue-labels exclusion filter
